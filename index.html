@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Wiki — A Pattern for Personal Knowledge Bases</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@200;400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg-0: #05060f;
+    --bg-1: #0a0e27;
+    --bg-2: #131938;
+    --bg-3: #1a2147;
+    --ink: #e8ecf8;
+    --ink-dim: #a3aed0;
+    --ink-faint: #6b7596;
+    --cyan: #00f5ff;
+    --cyan-2: #00d9ff;
+    --magenta: #ff3d8a;
+    --purple: #8b5cf6;
+    --green: #10d9a3;
+    --amber: #fbbf24;
+    --border: rgba(139, 92, 246, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg-0);
+    color: var(--ink);
+    font-family: 'Space Grotesk', sans-serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .font-display { font-family: 'Outfit', sans-serif; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Particle canvas */
+  #particle-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Aurora glow blobs */
+  .aurora {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.35;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Glass card */
+  .glass {
+    background: linear-gradient(135deg, rgba(26,33,71,0.55), rgba(10,14,39,0.35));
+    border: 1px solid var(--border);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .glass-hover { transition: all .35s cubic-bezier(.2,.8,.2,1); }
+  .glass-hover:hover {
+    transform: translateY(-4px);
+    border-color: rgba(0,245,255,0.45);
+    box-shadow: 0 12px 40px rgba(0,245,255,0.10), 0 0 0 1px rgba(0,245,255,0.18) inset;
+  }
+
+  /* Glow text */
+  .glow-cyan { text-shadow: 0 0 18px rgba(0,245,255,0.55), 0 0 40px rgba(0,245,255,0.25); }
+  .glow-magenta { text-shadow: 0 0 18px rgba(255,61,138,0.55), 0 0 40px rgba(255,61,138,0.25); }
+
+  /* Gradient text */
+  .grad-cyan {
+    background: linear-gradient(120deg, #00f5ff 0%, #8b5cf6 50%, #ff3d8a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .grad-warm {
+    background: linear-gradient(120deg, #fbbf24 0%, #ff3d8a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Animated underline */
+  .nav-link { position: relative; transition: color .25s; }
+  .nav-link::after {
+    content: ''; position: absolute; left: 0; bottom: -4px;
+    width: 0; height: 2px; background: var(--cyan);
+    transition: width .3s ease;
+  }
+  .nav-link:hover { color: var(--cyan); }
+  .nav-link:hover::after { width: 100%; }
+
+  /* Reveal animations */
+  .reveal { opacity: 0; transform: translateY(40px); transition: opacity .8s ease, transform .8s cubic-bezier(.2,.8,.2,1); }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .reveal-delay-1 { transition-delay: .1s; }
+  .reveal-delay-2 { transition-delay: .2s; }
+  .reveal-delay-3 { transition-delay: .3s; }
+  .reveal-delay-4 { transition-delay: .4s; }
+
+  /* Hero title flicker */
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    47% { opacity: 1; }
+    48% { opacity: 0.55; }
+    49% { opacity: 1; }
+    70% { opacity: 1; }
+    71% { opacity: 0.7; }
+    72% { opacity: 1; }
+  }
+  .flicker { animation: flicker 6s infinite; }
+
+  /* Floating animation */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+  .float { animation: float 6s ease-in-out infinite; }
+  .float-slow { animation: float 9s ease-in-out infinite; }
+
+  /* Pulse ring */
+  @keyframes pulse-ring {
+    0% { transform: scale(.8); opacity: .8; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+  .pulse-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid var(--cyan);
+    animation: pulse-ring 2.4s cubic-bezier(0,0,.2,1) infinite;
+  }
+
+  /* Scroll-down indicator */
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); opacity: .6; }
+    50% { transform: translateY(8px); opacity: 1; }
+  }
+  .bob { animation: bob 2s ease-in-out infinite; }
+
+  /* Section divider */
+  .section-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 999px;
+    background: rgba(0,245,255,0.08);
+    border: 1px solid rgba(0,245,255,0.25);
+    color: var(--cyan);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .section-tag::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--cyan); box-shadow: 0 0 8px var(--cyan);
+  }
+
+  /* Layer card */
+  .layer-card {
+    position: relative; overflow: hidden;
+    transition: all .4s cubic-bezier(.2,.8,.2,1);
+  }
+  .layer-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(0,245,255,0.15), transparent 50%);
+    opacity: 0; transition: opacity .35s;
+    pointer-events: none;
+  }
+  .layer-card:hover::before { opacity: 1; }
+  .layer-card:hover { transform: translateY(-6px); border-color: rgba(0,245,255,0.45); }
+
+  /* Animated node graph */
+  .graph-node { transition: all .3s; cursor: pointer; }
+  .graph-node:hover circle { r: 9; filter: drop-shadow(0 0 8px var(--cyan)); }
+  .graph-edge { stroke-dasharray: 4; animation: dash 30s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -200; } }
+
+  /* Code block */
+  .code-block {
+    background: linear-gradient(180deg, #0d1226 0%, #080b1a 100%);
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.65;
+    overflow: hidden;
+    position: relative;
+  }
+  .code-block::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 32px;
+    background: linear-gradient(180deg, rgba(139,92,246,0.12), transparent);
+    border-bottom: 1px solid rgba(139,92,246,0.18);
+  }
+  .code-dots { display: flex; gap: 6px; padding: 10px 14px; position: relative; z-index: 2; }
+  .code-dots span { width: 10px; height: 10px; border-radius: 50%; }
+  .code-content { padding: 12px 18px 18px; overflow-x: auto; }
+  .code-content pre { margin: 0; }
+  .tok-kw { color: #ff3d8a; }
+  .tok-str { color: #10d9a3; }
+  .tok-com { color: #6b7596; font-style: italic; }
+  .tok-fn { color: #00f5ff; }
+  .tok-num { color: #fbbf24; }
+  .tok-tag { color: #8b5cf6; }
+  .tok-punc { color: #a3aed0; }
+
+  /* Quiz */
+  .quiz-option {
+    transition: all .25s cubic-bezier(.2,.8,.2,1);
+    cursor: pointer;
+  }
+  .quiz-option:hover:not(.locked) {
+    transform: translateX(6px);
+    border-color: rgba(0,245,255,0.55);
+    background: rgba(0,245,255,0.06);
+  }
+  .quiz-option.correct {
+    background: rgba(16,217,163,0.14);
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .quiz-option.wrong {
+    background: rgba(255,61,138,0.14);
+    border-color: var(--magenta);
+    color: var(--magenta);
+  }
+  .quiz-option.locked { cursor: default; }
+  .quiz-option.locked:not(.correct):not(.wrong) { opacity: .45; }
+
+  .difficulty-btn {
+    transition: all .3s; cursor: pointer;
+  }
+  .difficulty-btn.active {
+    background: linear-gradient(135deg, rgba(0,245,255,0.18), rgba(139,92,246,0.18));
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 1px rgba(0,245,255,0.4), 0 12px 30px rgba(0,245,255,0.12);
+  }
+  .difficulty-btn.active .diff-icon { transform: scale(1.15); }
+
+  /* Progress bar */
+  .progress-track {
+    background: rgba(139,92,246,0.15);
+    height: 6px; border-radius: 999px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--cyan), var(--purple), var(--magenta));
+    transition: width .5s cubic-bezier(.2,.8,.2,1);
+    box-shadow: 0 0 12px rgba(0,245,255,0.55);
+  }
+
+  /* Step connector line */
+  .step-line {
+    position: absolute; left: 28px; top: 56px; bottom: -24px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--cyan), rgba(139,92,246,0.3));
+  }
+
+  /* Number badge */
+  .num-badge {
+    width: 56px; height: 56px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 22px;
+    background: linear-gradient(135deg, rgba(0,245,255,0.15), rgba(139,92,246,0.15));
+    border: 1px solid rgba(0,245,255,0.4);
+    color: var(--cyan);
+    box-shadow: 0 0 24px rgba(0,245,255,0.18);
+    flex-shrink: 0;
+  }
+
+  /* Marquee */
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  .marquee-track {
+    display: flex; gap: 48px;
+    animation: marquee 40s linear infinite;
+    width: max-content;
+  }
+
+  /* Counter */
+  .counter-num {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    background: linear-gradient(180deg, #fff, var(--cyan));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-0); }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--purple), var(--cyan));
+    border-radius: 8px;
+  }
+
+  /* Mobile nav */
+  #mobile-menu { transition: all .3s; max-height: 0; overflow: hidden; }
+  #mobile-menu.open { max-height: 320px; }
+
+  /* Comparison slider arrows */
+  .arrow-flow {
+    animation: arrow-pulse 2s ease-in-out infinite;
+  }
+  @keyframes arrow-pulse {
+    0%, 100% { opacity: .4; transform: translateX(0); }
+    50% { opacity: 1; transform: translateX(4px); }
+  }
+
+  /* Hide on small screens helper */
+  @media (max-width: 768px) {
+    .hide-mobile { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Particle background canvas -->
+<canvas id="particle-canvas"></canvas>
+
+<!-- Aurora glow blobs -->
+<div class="aurora" style="width: 500px; height: 500px; background: #00f5ff; top: -150px; left: -150px;"></div>
+<div class="aurora" style="width: 600px; height: 600px; background: #8b5cf6; top: 30%; right: -200px;"></div>
+<div class="aurora" style="width: 450px; height: 450px; background: #ff3d8a; bottom: -150px; left: 30%;"></div>
+
+<!-- NAV -->
+<nav class="fixed top-0 left-0 right-0 z-50 glass" style="border-left: none; border-right: none; border-top: none;">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="#hero" class="flex items-center gap-3 group">
+      <div class="relative w-9 h-9">
+        <div class="absolute inset-0 rounded-lg" style="background: linear-gradient(135deg, var(--cyan), var(--purple)); transform: rotate(45deg);"></div>
+        <div class="absolute inset-1 rounded-md flex items-center justify-center" style="background: var(--bg-0);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <circle cx="6" cy="6" r="2.5" fill="#00f5ff"/>
+            <circle cx="18" cy="6" r="2.5" fill="#8b5cf6"/>
+            <circle cx="6" cy="18" r="2.5" fill="#ff3d8a"/>
+            <circle cx="18" cy="18" r="2.5" fill="#10d9a3"/>
+            <line x1="6" y1="6" x2="18" y2="6" stroke="#a3aed0" stroke-width="1"/>
+            <line x1="6" y1="6" x2="6" y2="18" stroke="#a3aed0" stroke-width="1"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke="#a3aed0" stroke-width="1"/>
+            <line x1="18" y1="6" x2="18" y2="18" stroke="#a3aed0" stroke-width="1"/>
+            <line x1="6" y1="18" x2="18" y2="18" stroke="#a3aed0" stroke-width="1"/>
+          </svg>
+        </div>
+      </div>
+      <span class="font-display font-bold text-lg tracking-tight">LLM<span class="grad-cyan">Wiki</span></span>
+    </a>
+    <div class="hidden md:flex items-center gap-7 text-sm text-[var(--ink-dim)]">
+      <a href="#core-idea" class="nav-link">Core Idea</a>
+      <a href="#architecture" class="nav-link">Architecture</a>
+      <a href="#operations" class="nav-link">Operations</a>
+      <a href="#quiz" class="nav-link">Quiz</a>
+      <a href="#deep-dive" class="nav-link">Deep Dive</a>
+    </div>
+    <a href="#quiz" class="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style="background: linear-gradient(135deg, var(--cyan), var(--purple)); color: var(--bg-0);">
+      Take the Quiz
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <button id="mobile-menu-btn" class="md:hidden text-[var(--ink)]">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div id="mobile-menu" class="md:hidden px-6">
+    <div class="py-4 flex flex-col gap-3 text-sm text-[var(--ink-dim)]">
+      <a href="#core-idea" class="nav-link">Core Idea</a>
+      <a href="#architecture" class="nav-link">Architecture</a>
+      <a href="#operations" class="nav-link">Operations</a>
+      <a href="#quiz" class="nav-link">Quiz</a>
+      <a href="#deep-dive" class="nav-link">Deep Dive</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero" class="relative min-h-screen flex items-center justify-center px-6 pt-24 pb-12" style="z-index: 1;">
+  <div class="max-w-6xl mx-auto text-center relative">
+    <div class="reveal visible mb-6">
+      <span class="section-tag">A Pattern · For Personal Knowledge Bases</span>
+    </div>
+    <h1 class="font-display font-black leading-[0.92] tracking-tight flicker" style="font-size: clamp(3rem, 11vw, 9rem);">
+      <span class="grad-cyan">LLM</span><br>
+      <span class="glow-cyan">Wiki</span>
+    </h1>
+    <p class="reveal visible reveal-delay-1 mt-8 text-lg md:text-2xl text-[var(--ink-dim)] max-w-3xl mx-auto leading-relaxed">
+      Stop <span class="text-[var(--magenta)] font-medium">rediscovering</span> knowledge on every query.
+      Let your LLM <span class="text-[var(--cyan)] font-medium">compile, cross-reference, and maintain</span> a persistent wiki that compounds with every source you add.
+    </p>
+    <div class="reveal visible reveal-delay-2 mt-12 flex flex-wrap items-center justify-center gap-4">
+      <a href="#core-idea" class="group inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-medium" style="background: linear-gradient(135deg, var(--cyan), var(--purple)); color: var(--bg-0); box-shadow: 0 12px 40px rgba(0,245,255,0.25);">
+        Explore the Pattern
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="group-hover:translate-x-1 transition"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="#deep-dive" class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-medium glass glass-hover">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M8 9l3 3-3 3M13 15h3M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Build it with Claude Code
+      </a>
+    </div>
+
+    <!-- Stat strip -->
+    <div class="reveal visible reveal-delay-3 mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+      <div class="glass rounded-2xl p-5">
+        <div class="counter-num text-4xl md:text-5xl" data-target="3">0</div>
+        <div class="text-xs text-[var(--ink-faint)] mt-2 font-mono uppercase tracking-wider">Layers</div>
+      </div>
+      <div class="glass rounded-2xl p-5">
+        <div class="counter-num text-4xl md:text-5xl" data-target="15">0</div>
+        <div class="text-xs text-[var(--ink-faint)] mt-2 font-mono uppercase tracking-wider">Pages / ingest</div>
+      </div>
+      <div class="glass rounded-2xl p-5">
+        <div class="counter-num text-4xl md:text-5xl" data-target="100">0</div>
+        <div class="text-xs text-[var(--ink-faint)] mt-2 font-mono uppercase tracking-wider">Sources scale</div>
+      </div>
+      <div class="glass rounded-2xl p-5">
+        <div class="counter-num text-4xl md:text-5xl">∞</div>
+        <div class="text-xs text-[var(--ink-faint)] mt-2 font-mono uppercase tracking-wider">Compounding</div>
+      </div>
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bob text-[var(--ink-faint)]">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- Marquee divider -->
+<div class="relative overflow-hidden py-4 border-y" style="border-color: var(--border); z-index: 1; background: rgba(10,14,39,0.5);">
+  <div class="marquee-track text-[var(--ink-faint)] font-mono text-sm uppercase tracking-[0.3em]">
+    <span>· Obsidian is the IDE</span><span>· the LLM is the programmer</span><span>· the wiki is the codebase</span><span>· ingest · query · lint</span><span>· raw sources are immutable</span><span>· the schema co-evolves</span><span>· Obsidian is the IDE</span><span>· the LLM is the programmer</span><span>· the wiki is the codebase</span><span>· ingest · query · lint</span><span>· raw sources are immutable</span><span>· the schema co-evolves</span>
+  </div>
+</div>
+
+<!-- CORE IDEA -->
+<section id="core-idea" class="relative px-6 py-24 md:py-32" style="z-index: 1;">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="reveal mb-5"><span class="section-tag">01 · Core Idea</span></div>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-6xl leading-tight">
+        From <span class="grad-warm">rediscovering</span><br>to <span class="grad-cyan">compounding</span>
+      </h2>
+      <p class="reveal reveal-delay-2 mt-6 text-lg text-[var(--ink-dim)]">
+        Most LLM + documents workflows look like RAG: upload files, retrieve chunks at query time, generate. The LLM rediscovers knowledge from scratch on every question. Nothing accumulates. The LLM Wiki pattern flips this: knowledge is <span class="text-[var(--cyan)]">compiled once and kept current</span>.
+      </p>
+    </div>
+
+    <!-- Comparison -->
+    <div class="grid md:grid-cols-2 gap-6 lg:gap-8 mb-16">
+      <!-- RAG side -->
+      <div class="reveal glass rounded-3xl p-8 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 rounded-full" style="background: radial-gradient(circle, rgba(255,61,138,0.18), transparent 70%);"></div>
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <div class="font-mono text-xs uppercase tracking-widest text-[var(--magenta)] mb-1">The old way</div>
+            <h3 class="font-display font-bold text-2xl">RAG · Retrieval</h3>
+          </div>
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: rgba(255,61,138,0.12); border: 1px solid rgba(255,61,138,0.4);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" stroke="#ff3d8a" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <ul class="space-y-3 text-sm text-[var(--ink-dim)]">
+          <li class="flex gap-3"><span class="text-[var(--magenta)] mt-0.5">✕</span><span>LLM rediscovers knowledge from scratch on every query</span></li>
+          <li class="flex gap-3"><span class="text-[var(--magenta)] mt-0.5">✕</span><span>Synthesis must be re-derived each time</span></li>
+          <li class="flex gap-3"><span class="text-[var(--magenta)] mt-0.5">✕</span><span>No accumulation across conversations</span></li>
+          <li class="flex gap-3"><span class="text-[var(--magenta)] mt-0.5">✕</span><span>Contradictions surface and re-surface</span></li>
+          <li class="flex gap-3"><span class="text-[var(--magenta)] mt-0.5">✕</span><span>Explorations vanish into chat history</span></li>
+        </ul>
+      </div>
+
+      <!-- LLM Wiki side -->
+      <div class="reveal reveal-delay-1 glass rounded-3xl p-8 relative overflow-hidden" style="border-color: rgba(0,245,255,0.35);">
+        <div class="absolute top-0 right-0 w-32 h-32 rounded-full" style="background: radial-gradient(circle, rgba(0,245,255,0.20), transparent 70%);"></div>
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <div class="font-mono text-xs uppercase tracking-widest text-[var(--cyan)] mb-1">The new way</div>
+            <h3 class="font-display font-bold text-2xl">LLM Wiki · Compile</h3>
+          </div>
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: rgba(0,245,255,0.12); border: 1px solid rgba(0,245,255,0.4);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#00f5ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <ul class="space-y-3 text-sm text-[var(--ink-dim)]">
+          <li class="flex gap-3"><span class="text-[var(--cyan)] mt-0.5">✓</span><span>LLM reads each new source and integrates it into a persistent wiki</span></li>
+          <li class="flex gap-3"><span class="text-[var(--cyan)] mt-0.5">✓</span><span>Cross-references are already there</span></li>
+          <li class="flex gap-3"><span class="text-[var(--cyan)] mt-0.5">✓</span><span>Contradictions are flagged at ingest time</span></li>
+          <li class="flex gap-3"><span class="text-[var(--cyan)] mt-0.5">✓</span><span>Synthesis reflects everything you've read</span></li>
+          <li class="flex gap-3"><span class="text-[var(--cyan)] mt-0.5">✓</span><span>Explorations get filed back as new pages</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- The big insight -->
+    <div class="reveal glass rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
+      <div class="absolute inset-0 opacity-30" style="background: radial-gradient(circle at 50% 0%, rgba(0,245,255,0.25), transparent 60%);"></div>
+      <div class="relative">
+        <div class="font-mono text-xs uppercase tracking-widest text-[var(--cyan)] mb-4">The Key Insight</div>
+        <p class="font-display font-medium text-2xl md:text-4xl leading-snug max-w-4xl mx-auto">
+          The wiki is a <span class="grad-cyan font-bold">persistent, compounding artifact</span>.<br>
+          It gets richer with every source you add<br>and every question you ask.
+        </p>
+        <div class="mt-8 inline-flex items-center gap-3 text-sm text-[var(--ink-dim)] font-mono">
+          <span class="px-3 py-1 rounded-md" style="background: rgba(0,245,255,0.08); border: 1px solid rgba(0,245,255,0.25);">Obsidian = IDE</span>
+          <span class="arrow-flow text-[var(--cyan)]">→</span>
+          <span class="px-3 py-1 rounded-md" style="background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25);">LLM = Programmer</span>
+          <span class="arrow-flow text-[var(--purple)]">→</span>
+          <span class="px-3 py-1 rounded-md" style="background: rgba(255,61,138,0.08); border: 1px solid rgba(255,61,138,0.25);">Wiki = Codebase</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture" class="relative px-6 py-24 md:py-32" style="z-index: 1;">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="reveal mb-5"><span class="section-tag">02 · Architecture</span></div>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-6xl leading-tight">
+        Three <span class="grad-cyan">layers</span>,<br>one disciplined LLM
+      </h2>
+      <p class="reveal reveal-delay-2 mt-6 text-lg text-[var(--ink-dim)]">
+        Each layer has a clear owner. Raw sources are immutable truth. The wiki is LLM-owned and constantly rewritten. The schema is co-evolved between you and the LLM.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <!-- Layer 1: Raw sources -->
+      <div class="layer-card reveal glass rounded-3xl p-8">
+        <div class="flex items-center justify-between mb-6">
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--ink-faint)]">Layer 01</div>
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: rgba(16,217,163,0.12); border: 1px solid rgba(16,217,163,0.4);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 4h12a4 4 0 014 4v12H8a4 4 0 01-4-4V4z" stroke="#10d9a3" stroke-width="2" stroke-linejoin="round"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#10d9a3" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <h3 class="font-display font-bold text-2xl mb-2">Raw Sources</h3>
+        <div class="inline-block px-2.5 py-0.5 rounded text-xs font-mono mb-4" style="background: rgba(16,217,163,0.12); color: var(--green); border: 1px solid rgba(16,217,163,0.3);">immutable</div>
+        <p class="text-sm text-[var(--ink-dim)] mb-5 leading-relaxed">
+          Your curated collection of source documents. Articles, papers, images, data files, transcripts. The LLM reads from them but never modifies them. This is your source of truth.
+        </p>
+        <div class="space-y-2 font-mono text-xs text-[var(--ink-faint)]">
+          <div class="flex items-center gap-2"><span class="text-[var(--green)]">▸</span> raw/articles/2026-04-llm-pattern.md</div>
+          <div class="flex items-center gap-2"><span class="text-[var(--green)]">▸</span> raw/papers/attention-is-all-you-need.pdf</div>
+          <div class="flex items-center gap-2"><span class="text-[var(--green)]">▸</span> raw/assets/fig-01.png</div>
+          <div class="flex items-center gap-2"><span class="text-[var(--green)]">▸</span> raw/notes/2026-04-02-call.md</div>
+        </div>
+      </div>
+
+      <!-- Layer 2: The wiki -->
+      <div class="layer-card reveal reveal-delay-1 glass rounded-3xl p-8" style="border-color: rgba(0,245,255,0.35);">
+        <div class="flex items-center justify-between mb-6">
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--cyan)]">Layer 02 · core</div>
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: rgba(0,245,255,0.12); border: 1px solid rgba(0,245,255,0.4);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M8 3v4M16 3v4M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" stroke="#00f5ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <h3 class="font-display font-bold text-2xl mb-2">The Wiki</h3>
+        <div class="inline-block px-2.5 py-0.5 rounded text-xs font-mono mb-4" style="background: rgba(0,245,255,0.12); color: var(--cyan); border: 1px solid rgba(0,245,255,0.3);">LLM-owned</div>
+        <p class="text-sm text-[var(--ink-dim)] mb-5 leading-relaxed">
+          A directory of LLM-generated markdown files. Summaries, entity pages, concept pages, comparisons, an overview, a synthesis. You read it; the LLM writes and maintains it — creating pages, updating cross-references, flagging contradictions.
+        </p>
+        <div class="space-y-2 font-mono text-xs text-[var(--ink-faint)]">
+          <div class="flex items-center gap-2"><span class="text-[var(--cyan)]">▸</span> wiki/index.md</div>
+          <div class="flex items-center gap-2"><span class="text-[var(--cyan)]">▸</span> wiki/log.md</div>
+          <div class="flex items-center gap-2"><span class="text-[var(--cyan)]">▸</span> wiki/entities/llm.md</div>
+          <div class="flex items-center gap-2"><span class="text-[var(--cyan)]">▸</span> wiki/concepts/rag-vs-compile.md</div>
+          <div class="flex items-center gap-2"><span class="text-[var(--cyan)]">▸</span> wiki/synthesis/overview.md</div>
+        </div>
+      </div>
+
+      <!-- Layer 3: Schema -->
+      <div class="layer-card reveal reveal-delay-2 glass rounded-3xl p-8">
+        <div class="flex items-center justify-between mb-6">
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--ink-faint)]">Layer 03</div>
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.4);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <h3 class="font-display font-bold text-2xl mb-2">The Schema</h3>
+        <div class="inline-block px-2.5 py-0.5 rounded text-xs font-mono mb-4" style="background: rgba(139,92,246,0.12); color: var(--purple); border: 1px solid rgba(139,92,246,0.3);">co-evolved</div>
+        <p class="text-sm text-[var(--ink-dim)] mb-5 leading-relaxed">
+          A document (CLAUDE.md or AGENTS.md) that tells the LLM how the wiki is structured, what conventions to follow, and what workflows to run on ingest, query, and lint. This is what turns a chatbot into a disciplined maintainer.
+        </p>
+        <div class="space-y-2 font-mono text-xs text-[var(--ink-faint)]">
+          <div class="flex items-center gap-2"><span class="text-[var(--purple)]">▸</span> CLAUDE.md</div>
+          <div class="flex items-center gap-2"><span class="text-[var(--purple)]">▸</span> defines page templates</div>
+          <div class="flex items-center gap-2"><span class="text-[var(--purple)]">▸</span> defines ingest workflow</div>
+          <div class="flex items-center gap-2"><span class="text-[var(--purple)]">▸</span> defines lint checklist</div>
+          <div class="flex items-center gap-2"><span class="text-[var(--purple)]">▸</span> evolves with your domain</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wiki graph visualization -->
+    <div class="reveal mt-10 glass rounded-3xl p-6 md:p-10">
+      <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-3">
+        <div>
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--cyan)] mb-1">Live preview</div>
+          <h3 class="font-display font-bold text-2xl">What the wiki looks like</h3>
+        </div>
+        <div class="flex items-center gap-4 text-xs font-mono text-[var(--ink-faint)]">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background: var(--cyan);"></span> entity</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background: var(--purple);"></span> concept</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background: var(--magenta);"></span> source</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background: var(--green);"></span> synthesis</span>
+        </div>
+      </div>
+      <svg id="wiki-graph" viewBox="0 0 800 360" class="w-full h-auto" style="max-height: 380px;">
+        <!-- edges -->
+        <g stroke="rgba(139,92,246,0.35)" stroke-width="1.2" fill="none">
+          <line class="graph-edge" x1="400" y1="180" x2="180" y2="80"/>
+          <line class="graph-edge" x1="400" y1="180" x2="620" y2="80"/>
+          <line class="graph-edge" x1="400" y1="180" x2="160" y2="240"/>
+          <line class="graph-edge" x1="400" y1="180" x2="640" y2="240"/>
+          <line class="graph-edge" x1="400" y1="180" x2="400" y2="60"/>
+          <line class="graph-edge" x1="400" y1="180" x2="400" y2="320"/>
+          <line class="graph-edge" x1="180" y1="80" x2="160" y2="240"/>
+          <line class="graph-edge" x1="620" y1="80" x2="640" y2="240"/>
+          <line class="graph-edge" x1="180" y1="80" x2="320" y2="40"/>
+          <line class="graph-edge" x1="620" y1="80" x2="480" y2="40"/>
+          <line class="graph-edge" x1="160" y1="240" x2="320" y2="320"/>
+          <line class="graph-edge" x1="640" y1="240" x2="480" y2="320"/>
+          <line class="graph-edge" x1="320" y1="40" x2="480" y2="40"/>
+        </g>
+        <!-- nodes -->
+        <g class="graph-node" data-label="LLM">
+          <circle cx="400" cy="180" r="11" fill="#00f5ff" filter="drop-shadow(0 0 6px #00f5ff)"/>
+          <text x="400" y="208" text-anchor="middle" fill="#e8ecf8" font-size="12" font-family="JetBrains Mono">LLM</text>
+        </g>
+        <g class="graph-node" data-label="RAG">
+          <circle cx="180" cy="80" r="7" fill="#8b5cf6" filter="drop-shadow(0 0 5px #8b5cf6)"/>
+          <text x="180" y="64" text-anchor="middle" fill="#a3aed0" font-size="11" font-family="JetBrains Mono">RAG</text>
+        </g>
+        <g class="graph-node" data-label="Obsidian">
+          <circle cx="620" cy="80" r="7" fill="#8b5cf6" filter="drop-shadow(0 0 5px #8b5cf6)"/>
+          <text x="620" y="64" text-anchor="middle" fill="#a3aed0" font-size="11" font-family="JetBrains Mono">Obsidian</text>
+        </g>
+        <g class="graph-node" data-label="Memex">
+          <circle cx="160" cy="240" r="7" fill="#8b5cf6" filter="drop-shadow(0 0 5px #8b5cf6)"/>
+          <text x="160" y="262" text-anchor="middle" fill="#a3aed0" font-size="11" font-family="JetBrains Mono">Memex</text>
+        </g>
+        <g class="graph-node" data-label="Marp">
+          <circle cx="640" cy="240" r="7" fill="#8b5cf6" filter="drop-shadow(0 0 5px #8b5cf6)"/>
+          <text x="640" y="262" text-anchor="middle" fill="#a3aed0" font-size="11" font-family="JetBrains Mono">Marp</text>
+        </g>
+        <g class="graph-node" data-label="paper-01">
+          <circle cx="400" cy="60" r="6" fill="#ff3d8a" filter="drop-shadow(0 0 5px #ff3d8a)"/>
+          <text x="400" y="44" text-anchor="middle" fill="#a3aed0" font-size="11" font-family="JetBrains Mono">paper-01</text>
+        </g>
+        <g class="graph-node" data-label="overview">
+          <circle cx="400" cy="320" r="8" fill="#10d9a3" filter="drop-shadow(0 0 5px #10d9a3)"/>
+          <text x="400" y="344" text-anchor="middle" fill="#a3aed0" font-size="11" font-family="JetBrains Mono">overview.md</text>
+        </g>
+        <g class="graph-node" data-label="article">
+          <circle cx="320" cy="40" r="5" fill="#ff3d8a" filter="drop-shadow(0 0 4px #ff3d8a)"/>
+        </g>
+        <g class="graph-node" data-label="article">
+          <circle cx="480" cy="40" r="5" fill="#ff3d8a" filter="drop-shadow(0 0 4px #ff3d8a)"/>
+        </g>
+        <g class="graph-node" data-label="entity">
+          <circle cx="320" cy="320" r="5" fill="#00f5ff" filter="drop-shadow(0 0 4px #00f5ff)"/>
+        </g>
+        <g class="graph-node" data-label="entity">
+          <circle cx="480" cy="320" r="5" fill="#00f5ff" filter="drop-shadow(0 0 4px #00f5ff)"/>
+        </g>
+      </svg>
+      <p class="text-center text-xs text-[var(--ink-faint)] mt-2 font-mono">A single ingest can touch 10–15 pages — every cross-reference already in place.</p>
+    </div>
+  </div>
+</section>
+
+<!-- OPERATIONS -->
+<section id="operations" class="relative px-6 py-24 md:py-32" style="z-index: 1;">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="reveal mb-5"><span class="section-tag">03 · Operations</span></div>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-6xl leading-tight">
+        Three operations,<br>one <span class="grad-cyan">compounding</span> loop
+      </h2>
+      <p class="reveal reveal-delay-2 mt-6 text-lg text-[var(--ink-dim)]">
+        Ingest feeds the wiki. Query reads from it. Lint keeps it healthy. Together they form a loop where every action makes the next one cheaper.
+      </p>
+    </div>
+
+    <!-- Flow diagram -->
+    <div class="reveal mb-12 glass rounded-3xl p-6 md:p-10">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-2 items-stretch text-center">
+        <!-- Ingest -->
+        <div class="p-6 rounded-2xl relative" style="background: rgba(0,245,255,0.05); border: 1px solid rgba(0,245,255,0.25);">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 float" style="background: linear-gradient(135deg, rgba(0,245,255,0.2), rgba(0,245,255,0.05)); border: 1px solid rgba(0,245,255,0.4);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="#00f5ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--cyan)] mb-1">Op · 01</div>
+          <h3 class="font-display font-bold text-xl mb-2">Ingest</h3>
+          <p class="text-xs text-[var(--ink-dim)]">Read source → discuss → write summary → update index → update entity/concept pages → append log</p>
+        </div>
+
+        <div class="hidden md:flex items-center justify-center">
+          <svg width="48" height="24" viewBox="0 0 48 24" fill="none"><path d="M2 12h40m0 0l-7-7m7 7l-7 7" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="arrow-flow"/></svg>
+        </div>
+        <div class="md:hidden flex justify-center"><svg width="24" height="48" viewBox="0 0 24 48" fill="none"><path d="M12 2v40m0 0l7-7m-7 7l-7-7" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="arrow-flow"/></svg></div>
+
+        <!-- Query -->
+        <div class="p-6 rounded-2xl relative" style="background: rgba(139,92,246,0.05); border: 1px solid rgba(139,92,246,0.25);">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 float-slow" style="background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05)); border: 1px solid rgba(139,92,246,0.4);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--purple)] mb-1">Op · 02</div>
+          <h3 class="font-display font-bold text-xl mb-2">Query</h3>
+          <p class="text-xs text-[var(--ink-dim)]">Read index → find pages → synthesize with citations → optionally file answer back as a new page</p>
+        </div>
+
+        <div class="hidden md:flex items-center justify-center">
+          <svg width="48" height="24" viewBox="0 0 48 24" fill="none"><path d="M2 12h40m0 0l-7-7m7 7l-7 7" stroke="#ff3d8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="arrow-flow"/></svg>
+        </div>
+        <div class="md:hidden flex justify-center"><svg width="24" height="48" viewBox="0 0 24 48" fill="none"><path d="M12 2v40m0 0l7-7m-7 7l-7-7" stroke="#ff3d8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="arrow-flow"/></svg></div>
+
+        <!-- Lint -->
+        <div class="p-6 rounded-2xl relative" style="background: rgba(255,61,138,0.05); border: 1px solid rgba(255,61,138,0.25);">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 float" style="background: linear-gradient(135deg, rgba(255,61,138,0.2), rgba(255,61,138,0.05)); border: 1px solid rgba(255,61,138,0.4);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="#ff3d8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--magenta)] mb-1">Op · 03</div>
+          <h3 class="font-display font-bold text-xl mb-2">Lint</h3>
+          <p class="text-xs text-[var(--ink-dim)]">Find contradictions, stale claims, orphans, missing pages, broken cross-refs → suggest questions & new sources</p>
+        </div>
+      </div>
+
+      <div class="mt-8 flex justify-center">
+        <div class="inline-flex items-center gap-3 text-sm text-[var(--ink-dim)] font-mono px-4 py-2 rounded-full" style="background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 11-9-9c2.5 0 4.5 2 4.5 4.5S14.5 12 17 12c1.5 0 3-1 4-3" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round"/></svg>
+          loop runs forever · the wiki keeps getting richer
+        </div>
+      </div>
+    </div>
+
+    <!-- Operation detail cards -->
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="reveal glass glass-hover rounded-3xl p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-display font-bold text-lg" style="background: rgba(0,245,255,0.15); color: var(--cyan); border: 1px solid rgba(0,245,255,0.4);">1</div>
+          <h3 class="font-display font-bold text-lg">Drop & discuss</h3>
+        </div>
+        <p class="text-sm text-[var(--ink-dim)] leading-relaxed">
+          Drop a source into <code class="font-mono text-xs px-1.5 py-0.5 rounded" style="background: rgba(0,245,255,0.1); color: var(--cyan);">raw/</code> and tell the LLM to ingest. Discuss key takeaways, then let it write a summary page, update the index, and touch 10–15 related pages across the wiki.
+        </p>
+      </div>
+      <div class="reveal reveal-delay-1 glass glass-hover rounded-3xl p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-display font-bold text-lg" style="background: rgba(139,92,246,0.15); color: var(--purple); border: 1px solid rgba(139,92,246,0.4);">2</div>
+          <h3 class="font-display font-bold text-lg">Ask & file</h3>
+        </div>
+        <p class="text-sm text-[var(--ink-dim)] leading-relaxed">
+          Ask questions against the wiki. The LLM reads the index, drills into pages, and synthesizes an answer with citations. A great comparison or analysis you asked for? <span class="text-[var(--cyan)]">File it back as a new page</span> — explorations compound.
+        </p>
+      </div>
+      <div class="reveal reveal-delay-2 glass glass-hover rounded-3xl p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-display font-bold text-lg" style="background: rgba(255,61,138,0.15); color: var(--magenta); border: 1px solid rgba(255,61,138,0.4);">3</div>
+          <h3 class="font-display font-bold text-lg">Health-check</h3>
+        </div>
+        <p class="text-sm text-[var(--ink-dim)] leading-relaxed">
+          Periodically ask the LLM to lint. It surfaces contradictions, stale claims superseded by newer sources, orphan pages with no inbound links, missing cross-references, and data gaps — then suggests what to investigate next.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INDEXING & LOGGING -->
+<section id="indexing" class="relative px-6 py-24 md:py-32" style="z-index: 1;">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="reveal mb-5"><span class="section-tag">04 · Navigation</span></div>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-6xl leading-tight">
+        Two files, <span class="grad-cyan">two views</span>
+      </h2>
+      <p class="reveal reveal-delay-2 mt-6 text-lg text-[var(--ink-dim)]">
+        <code class="font-mono text-[var(--cyan)]">index.md</code> is content-oriented — a catalog of every page. <code class="font-mono text-[var(--magenta)]">log.md</code> is chronological — an append-only timeline of every action. Together they let the LLM navigate without embeddings.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-6">
+      <!-- index.md -->
+      <div class="reveal">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full" style="background: var(--cyan); box-shadow: 0 0 8px var(--cyan);"></span>
+            <span class="font-mono text-sm text-[var(--ink-dim)]">wiki/index.md · content-oriented</span>
+          </div>
+          <span class="text-xs font-mono text-[var(--ink-faint)]">catalog</span>
+        </div>
+        <div class="code-block">
+          <div class="code-dots"><span style="background: #ff5f56;"></span><span style="background: #ffbd2e;"></span><span style="background: #27c93f;"></span><span class="ml-2 text-xs text-[var(--ink-faint)]">index.md</span></div>
+          <div class="code-content"><pre><span class="tok-com"># LLM Wiki — Index</span>
+<span class="tok-com"># Updated by LLM on every ingest. Read first when answering queries.</span>
+
+<span class="tok-tag">## Entities</span>
+- <span class="tok-fn">[[llm]]</span>          <span class="tok-com">// large language models · 4 sources</span>
+- <span class="tok-fn">[[obsidian]]</span>      <span class="tok-com">// markdown IDE · 2 sources</span>
+- <span class="tok-fn">[[memex]]</span>         <span class="tok-com">// Vannevar Bush, 1945 · 1 source</span>
+- <span class="tok-fn">[[qmd]]</span>           <span class="tok-com">// local md search · 1 source</span>
+
+<span class="tok-tag">## Concepts</span>
+- <span class="tok-fn">[[rag-vs-compile]]</span> <span class="tok-com">// the core distinction · 3 sources</span>
+- <span class="tok-fn">[[ingest-workflow]]</span>
+- <span class="tok-fn">[[lint-checklist]]</span>
+- <span class="tok-fn">[[schema-evolution]]</span>
+
+<span class="tok-tag">## Sources</span>
+- <span class="tok-fn">[[src-2026-04-pattern]]</span>  <span class="tok-com">// original idea doc</span>
+- <span class="tok-fn">[[src-2026-04-attention]]</span> <span class="tok-com">// Vaswani et al.</span>
+
+<span class="tok-tag">## Synthesis</span>
+- <span class="tok-fn">[[overview]]</span>  <span class="tok-com">// the evolving thesis</span>
+- <span class="tok-fn">[[contradictions]]</span></pre></div>
+        </div>
+      </div>
+
+      <!-- log.md -->
+      <div class="reveal reveal-delay-1">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full" style="background: var(--magenta); box-shadow: 0 0 8px var(--magenta);"></span>
+            <span class="font-mono text-sm text-[var(--ink-dim)]">wiki/log.md · chronological</span>
+          </div>
+          <span class="text-xs font-mono text-[var(--ink-faint)]">append-only</span>
+        </div>
+        <div class="code-block">
+          <div class="code-dots"><span style="background: #ff5f56;"></span><span style="background: #ffbd2e;"></span><span style="background: #27c93f;"></span><span class="ml-2 text-xs text-[var(--ink-faint)]">log.md</span></div>
+          <div class="code-content"><pre><span class="tok-com"># Log</span>
+<span class="tok-com"># Consistent prefix → parseable with `grep "^## \[" log.md`</span>
+
+<span class="tok-tag">## [2026-04-02] ingest</span> <span class="tok-str">| LLM Wiki idea doc</span>
+- wrote <span class="tok-fn">src-2026-04-pattern.md</span> summary
+- created <span class="tok-fn">[[rag-vs-compile]]</span>
+- updated <span class="tok-fn">[[llm]]</span>, <span class="tok-fn">[[obsidian]]</span>, <span class="tok-fn">[[memex]]</span>
+- touched <span class="tok-num">11</span> pages total
+
+<span class="tok-tag">## [2026-04-03] query</span> <span class="tok-str">| "how does this differ from Memex?"</span>
+- synthesized answer with citations
+- filed as <span class="tok-fn">[[memex-vs-llm-wiki]]</span>
+
+<span class="tok-tag">## [2026-04-05] lint</span>
+- flagged <span class="tok-num">2</span> contradictions in <span class="tok-fn">[[llm]]</span>
+- found <span class="tok-num">1</span> orphan: <span class="tok-fn">[[marp]]</span>
+- suggested source: "Bush, As We May Think"
+
+<span class="tok-tag">## [2026-04-06] ingest</span> <span class="tok-str">| "As We May Think"</span>
+- resolved contradictions in <span class="tok-fn">[[llm]]</span>
+- linked <span class="tok-fn">[[memex]]</span> ↔ <span class="tok-fn">[[memex-vs-llm-wiki]]</span></pre></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal mt-8 grid md:grid-cols-3 gap-4">
+      <div class="glass rounded-2xl p-5 text-center">
+        <div class="font-mono text-xs uppercase tracking-widest text-[var(--cyan)] mb-2">Works at scale</div>
+        <p class="text-sm text-[var(--ink-dim)]">~100 sources · ~hundreds of pages · no embeddings required</p>
+      </div>
+      <div class="glass rounded-2xl p-5 text-center">
+        <div class="font-mono text-xs uppercase tracking-widest text-[var(--purple)] mb-2">Unix-parseable</div>
+        <p class="text-sm text-[var(--ink-dim)] font-mono">grep "^## \[" log.md | tail -5</p>
+      </div>
+      <div class="glass rounded-2xl p-5 text-center">
+        <div class="font-mono text-xs uppercase tracking-widest text-[var(--magenta)] mb-2">Timeline aware</div>
+        <p class="text-sm text-[var(--ink-dim)]">LLM reads recent log entries to know what's been done</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz" class="relative px-6 py-24 md:py-32" style="z-index: 1;">
+  <div class="max-w-5xl mx-auto">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <div class="reveal mb-5"><span class="section-tag">05 · Test Your Knowledge</span></div>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-6xl leading-tight">
+        The <span class="grad-cyan">LLM Wiki</span> Quiz
+      </h2>
+      <p class="reveal reveal-delay-2 mt-6 text-lg text-[var(--ink-dim)]">
+        Three difficulty levels. Pick your challenge, answer the questions, see your score.
+      </p>
+    </div>
+
+    <!-- Difficulty selector -->
+    <div id="difficulty-selector" class="reveal grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+      <button class="difficulty-btn glass rounded-2xl p-6 text-left active" data-difficulty="low">
+        <div class="flex items-start justify-between mb-4">
+          <div class="diff-icon w-12 h-12 rounded-xl flex items-center justify-center transition" style="background: rgba(16,217,163,0.12); border: 1px solid rgba(16,217,163,0.4);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 12h6l3-9 3 18 3-9h3" stroke="#10d9a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="font-mono text-xs text-[var(--ink-faint)]">3 Qs</span>
+        </div>
+        <h3 class="font-display font-bold text-xl mb-1">Low</h3>
+        <p class="text-sm text-[var(--ink-dim)]">Core concepts and the high-level idea.</p>
+      </button>
+
+      <button class="difficulty-btn glass rounded-2xl p-6 text-left" data-difficulty="medium">
+        <div class="flex items-start justify-between mb-4">
+          <div class="diff-icon w-12 h-12 rounded-xl flex items-center justify-center transition" style="background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.4);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 12h4l3-7 4 14 3-7h4" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="font-mono text-xs text-[var(--ink-faint)]">4 Qs</span>
+        </div>
+        <h3 class="font-display font-bold text-xl mb-1">Medium</h3>
+        <p class="text-sm text-[var(--ink-dim)]">Operations, schema, files and workflows.</p>
+      </button>
+
+      <button class="difficulty-btn glass rounded-2xl p-6 text-left" data-difficulty="high">
+        <div class="flex items-start justify-between mb-4">
+          <div class="diff-icon w-12 h-12 rounded-xl flex items-center justify-center transition" style="background: rgba(255,61,138,0.12); border: 1px solid rgba(255,61,138,0.4);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 18l4-4 3 3 4-8 3 5 4-3" stroke="#ff3d8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="font-mono text-xs text-[var(--ink-faint)]">5 Qs</span>
+        </div>
+        <h3 class="font-display font-bold text-xl mb-1">High</h3>
+        <p class="text-sm text-[var(--ink-dim)]">Edge cases, history, and subtle trade-offs.</p>
+      </button>
+    </div>
+
+    <!-- Quiz body -->
+    <div class="reveal glass rounded-3xl p-6 md:p-10">
+      <!-- Progress -->
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <span id="quiz-difficulty-badge" class="font-mono text-xs px-3 py-1 rounded-full" style="background: rgba(16,217,163,0.12); color: var(--green); border: 1px solid rgba(16,217,163,0.3);">LOW · 3 questions</span>
+          <span id="quiz-score" class="font-mono text-sm text-[var(--ink-dim)]">Score: <span class="text-[var(--cyan)] font-bold">0</span> / <span id="quiz-total">3</span></span>
+        </div>
+        <span id="quiz-progress-label" class="font-mono text-xs text-[var(--ink-faint)]">Question 1 of 3</span>
+      </div>
+      <div class="progress-track mb-8">
+        <div id="quiz-progress-fill" class="progress-fill" style="width: 33%;"></div>
+      </div>
+
+      <!-- Question container -->
+      <div id="quiz-question-container">
+        <h3 id="quiz-question-text" class="font-display font-bold text-xl md:text-2xl leading-snug mb-6"></h3>
+        <div id="quiz-options" class="space-y-3"></div>
+      </div>
+
+      <!-- Explanation -->
+      <div id="quiz-explanation" class="hidden mt-6 p-5 rounded-2xl" style="background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.25);">
+        <div class="flex items-start gap-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10" stroke="#8b5cf6" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round"/></svg>
+          <div>
+            <div class="font-mono text-xs uppercase tracking-widest text-[var(--purple)] mb-1">Why</div>
+            <p id="quiz-explanation-text" class="text-sm text-[var(--ink-dim)] leading-relaxed"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="mt-8 flex items-center justify-between">
+        <button id="quiz-restart" class="text-sm text-[var(--ink-faint)] hover:text-[var(--ink)] transition flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 109-9c-2.5 0-4.7 1-6.4 2.6L3 8M3 3v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Restart
+        </button>
+        <button id="quiz-next" class="hidden inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition" style="background: linear-gradient(135deg, var(--cyan), var(--purple)); color: var(--bg-0);">
+          <span id="quiz-next-label">Next</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <!-- Final result -->
+      <div id="quiz-result" class="hidden text-center py-8">
+        <div class="relative inline-block mb-6">
+          <div class="pulse-ring"></div>
+          <div class="w-32 h-32 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, var(--cyan), var(--purple)); box-shadow: 0 0 40px rgba(0,245,255,0.4);">
+            <div class="font-display font-black text-4xl text-[var(--bg-0)]" id="quiz-final-percent">0%</div>
+          </div>
+        </div>
+        <h3 class="font-display font-bold text-3xl mb-2" id="quiz-result-title">Compiling...</h3>
+        <p class="text-[var(--ink-dim)] max-w-md mx-auto mb-6" id="quiz-result-message"></p>
+        <button id="quiz-retry" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium glass glass-hover">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 109-9c-2.5 0-4.7 1-6.4 2.6L3 8M3 3v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Try again
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEEP DIVE -->
+<section id="deep-dive" class="relative px-6 py-24 md:py-32" style="z-index: 1;">
+  <div class="max-w-5xl mx-auto">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="reveal mb-5"><span class="section-tag">06 · Build It With Claude Code</span></div>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-6xl leading-tight">
+        The <span class="grad-cyan">Deep Dive</span>
+      </h2>
+      <p class="reveal reveal-delay-2 mt-6 text-lg text-[var(--ink-dim)]">
+        A complete, step-by-step implementation using Claude Code. From zero repo to a healthy, compounding knowledge base. Each step shows the exact commands and the markdown you'll write.
+      </p>
+    </div>
+
+    <!-- Steps -->
+    <div class="space-y-6">
+
+      <!-- STEP 1 -->
+      <div class="reveal relative pl-24">
+        <div class="step-line"></div>
+        <div class="num-badge absolute left-0 top-0">1</div>
+        <div class="glass rounded-2xl p-6 md:p-8">
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--cyan)] mb-1">Setup</div>
+          <h3 class="font-display font-bold text-2xl mb-3">Install Claude Code & scaffold the repo</h3>
+          <p class="text-sm text-[var(--ink-dim)] mb-5 leading-relaxed">
+            Claude Code is Anthropic's agentic CLI. Install it via npm, then authenticate. Create a fresh git repo — your wiki will live here as a versioned collection of markdown files. Git gives you history, branching, and collaboration for free.
+          </p>
+          <div class="code-block">
+            <div class="code-dots"><span style="background: #ff5f56;"></span><span style="background: #ffbd2e;"></span><span style="background: #27c93f;"></span><span class="ml-2 text-xs text-[var(--ink-faint)]">terminal</span></div>
+            <div class="code-content"><pre><span class="tok-com"># 1. Install Claude Code (requires Node 18+)</span>
+npm install -g <span class="tok-fn">@anthropic-ai/claude-code</span>
+
+<span class="tok-com"># 2. Authenticate (opens browser, signs in with your Anthropic account)</span>
+claude
+
+<span class="tok-com"># 3. Scaffold the repo</span>
+mkdir my-wiki <span class="tok-punc">&amp;&amp;</span> cd my-wiki
+git init
+
+<span class="tok-com"># 4. Create the three-layer structure</span>
+mkdir -p raw/articles raw/papers raw/notes raw/assets
+mkdir -p wiki/entities wiki/concepts wiki/sources wiki/synthesis
+touch wiki/index.md wiki/log.md
+
+<span class="tok-com"># 5. Launch Claude Code inside the repo</span>
+claude</pre></div>
+          </div>
+          <div class="mt-4 flex items-start gap-3 p-4 rounded-xl" style="background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.25);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="flex-shrink-0 mt-0.5"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <p class="text-xs text-[var(--ink-dim)]"><span class="text-[var(--amber)] font-medium">Why git:</span> Every ingest is a commit. If the LLM botches a refactor, <code class="font-mono">git reset</code> undoes it. The diff between commits shows exactly what an ingest changed across the wiki.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="reveal relative pl-24">
+        <div class="step-line"></div>
+        <div class="num-badge absolute left-0 top-0">2</div>
+        <div class="glass rounded-2xl p-6 md:p-8">
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--purple)] mb-1">Schema</div>
+          <h3 class="font-display font-bold text-2xl mb-3">Write the CLAUDE.md schema</h3>
+          <p class="text-sm text-[var(--ink-dim)] mb-5 leading-relaxed">
+            This is the single most important file. It's what turns Claude from a generic chatbot into a disciplined wiki maintainer. Define the directory structure, page templates, the three workflows (ingest / query / lint), and the conventions for index.md and log.md. Co-evolve this file over time as you learn what works.
+          </p>
+          <div class="code-block">
+            <div class="code-dots"><span style="background: #ff5f56;"></span><span style="background: #ffbd2e;"></span><span style="background: #27c93f;"></span><span class="ml-2 text-xs text-[var(--ink-faint)]">CLAUDE.md</span></div>
+            <div class="code-content"><pre><span class="tok-com"># LLM Wiki — Project Schema</span>
+
+<span class="tok-tag">## Layout</span>
+- <span class="tok-fn">raw/</span>      immutable sources. NEVER modify.
+- <span class="tok-fn">wiki/</span>     LLM-owned. Create, update, delete freely.
+  - <span class="tok-fn">entities/</span>    people, products, orgs, papers
+  - <span class="tok-fn">concepts/</span>    ideas, methods, distinctions
+  - <span class="tok-fn">sources/</span>     one summary page per ingested source
+  - <span class="tok-fn">synthesis/</span>   overviews, comparisons, theses
+- <span class="tok-fn">wiki/index.md</span>  catalog. Update on every ingest.
+- <span class="tok-fn">wiki/log.md</span>    append-only timeline.
+
+<span class="tok-tag">## Page template</span>
+Every wiki page starts with YAML frontmatter:
+<span class="tok-kw">---</span>
+<span class="tok-str">type</span>: entity <span class="tok-punc">|</span> concept <span class="tok-punc">|</span> source <span class="tok-punc">|</span> synthesis
+<span class="tok-str">title</span>: ...
+<span class="tok-str">created</span>: YYYY-MM-DD
+<span class="tok-str">updated</span>: YYYY-MM-DD
+<span class="tok-str">sources</span>: [<span class="tok-fn">[[src-...]]</span>, ...]
+<span class="tok-kw">---</span>
+
+<span class="tok-tag">## Workflows</span>
+
+<span class="tok-kw">ingest</span> &lt;path-to-source&gt;:
+  1. Read the source fully.
+  2. Discuss key takeaways with the user.
+  3. Write <span class="tok-fn">wiki/sources/src-&lt;date&gt;-&lt;slug&gt;.md</span>.
+  4. Update every relevant entity / concept page.
+  5. Create new pages for entities/concepts not yet in the wiki.
+  6. Flag contradictions with existing pages explicitly.
+  7. Update <span class="tok-fn">wiki/index.md</span>.
+  8. Append entry to <span class="tok-fn">wiki/log.md</span> using prefix:
+     <span class="tok-str">## [YYYY-MM-DD] ingest | &lt;title&gt;</span>
+
+<span class="tok-kw">query</span> &lt;question&gt;:
+  1. Read <span class="tok-fn">wiki/index.md</span> first.
+  2. Drill into relevant pages.
+  3. Synthesize answer with <span class="tok-fn">[[citations]]</span>.
+  4. If the answer is non-trivial, ask the user whether to file it
+     as a new page under <span class="tok-fn">wiki/synthesis/</span>.
+  5. Append <span class="tok-str">## [YYYY-MM-DD] query | &lt;question&gt;</span> to log.
+
+<span class="tok-kw">lint</span>:
+  1. Scan for contradictions between pages.
+  2. Find stale claims superseded by newer sources.
+  3. List orphan pages (no inbound links).
+  4. List important concepts mentioned but without their own page.
+  5. Suggest 3–5 new questions to investigate or sources to find.
+  6. Append <span class="tok-str">## [YYYY-MM-DD] lint</span> to log.
+
+<span class="tok-tag">## Conventions</span>
+- Use <span class="tok-fn">[[wikilinks]]</span> for all cross-references.
+- One source per file in <span class="tok-fn">wiki/sources/</span>.
+- Be terse. The wiki is for skimming, not reading end-to-end.
+- When in doubt, ask the user before deleting a page.</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="reveal relative pl-24">
+        <div class="step-line"></div>
+        <div class="num-badge absolute left-0 top-0">3</div>
+        <div class="glass rounded-2xl p-6 md:p-8">
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--cyan)] mb-1">First ingest</div>
+          <h3 class="font-display font-bold text-2xl mb-3">Drop a source & ingest it</h3>
+          <p class="text-sm text-[var(--ink-dim)] mb-5 leading-relaxed">
+            Save an article, paper, or transcript into <code class="font-mono text-[var(--cyan)]">raw/</code>. Then in Claude Code, simply say "ingest". Claude reads the source, summarizes it, updates every related page, and logs the action. Watch the diff in your editor — a single ingest can touch 10–15 files.
+          </p>
+          <div class="code-block">
+            <div class="code-dots"><span style="background: #ff5f56;"></span><span style="background: #ffbd2e;"></span><span style="background: #27c93f;"></span><span class="ml-2 text-xs text-[var(--ink-faint)]">terminal · claude REPL</span></div>
+            <div class="code-content"><pre><span class="tok-com"># Drop a source into raw/</span>
+curl -sL https://example.com/llm-pattern.md <span class="tok-punc">&gt;</span> raw/articles/2026-04-llm-pattern.md
+
+<span class="tok-com"># In Claude Code's REPL:</span>
+<span class="tok-punc">&gt;</span> ingest raw/articles/2026-04-llm-pattern.md
+
+<span class="tok-com"># Claude will:</span>
+<span class="tok-com">#   1. read the file</span>
+<span class="tok-com">#   2. summarize key takeaways aloud</span>
+<span class="tok-com">#   3. write wiki/sources/src-2026-04-llm-pattern.md</span>
+<span class="tok-com">#   4. create wiki/entities/llm.md if it doesn't exist</span>
+<span class="tok-com">#   5. update wiki/concepts/rag-vs-compile.md</span>
+<span class="tok-com">#   6. update wiki/index.md</span>
+<span class="tok-com">#   7. append to wiki/log.md</span>
+
+<span class="tok-com"># Review the diff:</span>
+git diff --stat
+<span class="tok-com">#  wiki/sources/src-2026-04-llm-pattern.md | 84 +++++++++++++++</span>
+<span class="tok-com">#  wiki/entities/llm.md                  | 22 ++++-</span>
+<span class="tok-com">#  wiki/concepts/rag-vs-compile.md       | 31 +++++++</span>
+<span class="tok-com">#  wiki/index.md                         |  6 ++</span>
+<span class="tok-com">#  wiki/log.md                           |  9 +++</span>
+<span class="tok-com">#  5 files changed, 152 insertions(+), 4 deletions(-)</span>
+
+git add -A <span class="tok-punc">&amp;&amp;</span> git commit -m <span class="tok-str">"ingest: llm-pattern article"</span></pre></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="reveal relative pl-24">
+        <div class="step-line"></div>
+        <div class="num-badge absolute left-0 top-0">4</div>
+        <div class="glass rounded-2xl p-6 md:p-8">
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--purple)] mb-1">First query</div>
+          <h3 class="font-display font-bold text-2xl mb-3">Ask a question & file the answer</h3>
+          <p class="text-sm text-[var(--ink-dim)] mb-5 leading-relaxed">
+            Ask any question. Claude reads <code class="font-mono text-[var(--cyan)]">index.md</code>, drills into the relevant pages, and synthesizes an answer with citations. If the answer is non-trivial, ask Claude to file it back as a new synthesis page — your explorations compound.
+          </p>
+          <div class="code-block">
+            <div class="code-dots"><span style="background: #ff5f56;"></span><span style="background: #ffbd2e;"></span><span style="background: #27c93f;"></span><span class="ml-2 text-xs text-[var(--ink-faint)]">terminal · claude REPL</span></div>
+            <div class="code-content"><pre><span class="tok-punc">&gt;</span> query: how does the LLM Wiki pattern differ from Vannevar Bush's Memex?
+
+<span class="tok-com"># Claude reads wiki/index.md, then:</span>
+<span class="tok-com">#   - wiki/concepts/rag-vs-compile.md</span>
+<span class="tok-com">#   - wiki/entities/memex.md</span>
+<span class="tok-com">#   - wiki/sources/src-2026-04-llm-pattern.md</span>
+
+<span class="tok-com"># Claude answers with citations:</span>
+<span class="tok-str">"Both envision a personal, curated knowledge store with
+ associative trails between documents [[memex]]. The key
+ difference is maintenance: Bush couldn't solve who does the
+ bookkeeping. The LLM Wiki pattern offloads that to the LLM
+ [[rag-vs-compile]], making the wiki self-maintaining."</span>
+
+<span class="tok-punc">&gt;</span> great answer. File it as a synthesis page.
+
+<span class="tok-com"># Claude writes wiki/synthesis/memex-vs-llm-wiki.md</span>
+<span class="tok-com"># and links it from index.md and the entities it cites.</span>
+
+git add -A <span class="tok-punc">&amp;&amp;</span> git commit -m <span class="tok-str">"query: memex vs llm wiki"</span></pre></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5 -->
+      <div class="reveal relative pl-24">
+        <div class="step-line"></div>
+        <div class="num-badge absolute left-0 top-0">5</div>
+        <div class="glass rounded-2xl p-6 md:p-8">
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--magenta)] mb-1">First lint</div>
+          <h3 class="font-display font-bold text-2xl mb-3">Health-check the wiki</h3>
+          <p class="text-sm text-[var(--ink-dim)] mb-5 leading-relaxed">
+            After a few ingests, ask Claude to lint. It will scan the entire wiki and report contradictions, orphans, stale claims, and gaps. Lint output isn't just cleanup — it's a list of next investigations. Run it whenever the wiki feels unwieldy, or roughly every 10 ingests.
+          </p>
+          <div class="code-block">
+            <div class="code-dots"><span style="background: #ff5f56;"></span><span style="background: #ffbd2e;"></span><span style="background: #27c93f;"></span><span class="ml-2 text-xs text-[var(--ink-faint)]">terminal · claude REPL</span></div>
+            <div class="code-content"><pre><span class="tok-punc">&gt;</span> lint
+
+<span class="tok-com"># Claude reports:</span>
+<span class="tok-tag">## Lint report · 2026-04-12</span>
+
+<span class="tok-kw">Contradictions</span> (2)
+- <span class="tok-fn">[[llm]]</span> claims "context windows double yearly"
+  vs <span class="tok-fn">src-2026-03-trends.md</span> claims "growth has slowed"
+  → suggest: reconcile and date-stamp both claims
+
+<span class="tok-kw">Orphans</span> (1)
+- <span class="tok-fn">[[marp]]</span> has no inbound links
+  → suggest: link from <span class="tok-fn">[[output-formats]]</span>
+
+<span class="tok-kw">Missing pages</span> (3)
+- "embedding" mentioned in 4 pages, no own page
+- "MCP" mentioned in 2 pages, no own page
+- "graph view" mentioned in 3 pages, no own page
+
+<span class="tok-kw">Suggested sources to find</span>
+- "As We May Think" — Vannevar Bush, 1945
+- A recent paper on long-context retrieval failures
+
+<span class="tok-com"># Claude appends to log.md:</span>
+<span class="tok-tag">## [2026-04-12] lint</span>
+- flagged 2 contradictions, 1 orphan, 3 missing pages
+- suggested 2 sources
+
+git add -A <span class="tok-punc">&amp;&amp;</span> git commit -m <span class="tok-str">"lint: 2026-04-12"</span></pre></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 6 -->
+      <div class="reveal relative pl-24">
+        <div class="step-line"></div>
+        <div class="num-badge absolute left-0 top-0">6</div>
+        <div class="glass rounded-2xl p-6 md:p-8">
+          <div class="font-mono text-xs uppercase tracking-widest text-[var(--cyan)] mb-1">Iterate</div>
+          <h3 class="font-display font-bold text-2xl mb-3">Open in Obsidian & co-evolve the schema</h3>
+          <p class="text-sm text-[var(--ink-dim)] mb-5 leading-relaxed">
+            Open the same folder in Obsidian. Browse the graph view, follow links, watch pages update in real time as Claude edits them. As you use the wiki, you'll discover friction — page templates that don't fit, workflows that need an extra step. Update CLAUDE.md, and the next session picks it up. The schema is alive.
+          </p>
+          <div class="code-block">
+            <div class="code-dots"><span style="background: #ff5f56;"></span><span style="background: #ffbd2e;"></span><span style="background: #27c93f;"></span><span class="ml-2 text-xs text-[var(--ink-faint)]">terminal · claude REPL</span></div>
+            <div class="code-content"><pre><span class="tok-com"># Open in Obsidian (set as vault)</span>
+obsidian <span class="tok-punc">.</span>
+
+<span class="tok-com"># Recommended Obsidian plugins</span>
+<span class="tok-com">#   - Dataview      (queries over YAML frontmatter)</span>
+<span class="tok-com">#   - Marp          (slide decks from wiki content)</span>
+<span class="tok-com">#   - Web Clipper   (browser → raw/articles/)</span>
+
+<span class="tok-com"># When you discover friction, refine CLAUDE.md:</span>
+<span class="tok-punc">&gt;</span> Update CLAUDE.md: when ingesting a paper, also extract
+  the bibliography into a "Cites" section in the source page.
+
+<span class="tok-com"># Claude edits CLAUDE.md, future ingests follow the new rule.</span>
+git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span class="tok-str">"schema: extract bibliographies on ingest"</span>
+
+<span class="tok-com"># At scale (~100+ sources), add a search CLI:</span>
+<span class="tok-punc">&gt;</span> Add qmd for hybrid BM25+vector search over wiki/.
+
+<span class="tok-com"># Claude installs qmd, wires it into the query workflow,</span>
+<span class="tok-com"># and updates CLAUDE.md to use it.</span></pre></div>
+          </div>
+          <div class="mt-4 flex items-start gap-3 p-4 rounded-xl" style="background: rgba(0,245,255,0.06); border: 1px solid rgba(0,245,255,0.25);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="flex-shrink-0 mt-0.5"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="#00f5ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <p class="text-xs text-[var(--ink-dim)]"><span class="text-[var(--cyan)] font-medium">The pattern in one line:</span> Obsidian is the IDE, the LLM is the programmer, the wiki is the codebase. Treat CLAUDE.md like a README that grows with the project.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- TIPS & TRICKS -->
+<section id="tips" class="relative px-6 py-24 md:py-32" style="z-index: 1;">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="reveal mb-5"><span class="section-tag">07 · Tips & Tricks</span></div>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-6xl leading-tight">
+        Sharpen <span class="grad-cyan">the workflow</span>
+      </h2>
+      <p class="reveal reveal-delay-2 mt-6 text-lg text-[var(--ink-dim)]">
+        Practical moves that make the wiki faster to feed, easier to browse, and resilient as it grows.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="reveal glass glass-hover rounded-2xl p-6">
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style="background: rgba(0,245,255,0.12); border: 1px solid rgba(0,245,255,0.35);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="#00f5ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2">Obsidian Web Clipper</h3>
+        <p class="text-sm text-[var(--ink-dim)] leading-relaxed">Browser extension that converts any article to markdown. Two-click pipeline from "interesting" to ingested source in <code class="font-mono text-[var(--cyan)]">raw/articles/</code>.</p>
+      </div>
+
+      <div class="reveal reveal-delay-1 glass glass-hover rounded-2xl p-6">
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style="background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.35);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 16l4.58-4.58a2 2 0 012.83 0L16 16m-2-2l1.58-1.58a2 2 0 012.83 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2">Download images locally</h3>
+        <p class="text-sm text-[var(--ink-dim)] leading-relaxed">Set Obsidian's "Attachment folder path" to <code class="font-mono text-[var(--purple)]">raw/assets/</code>. Bind "Download attachments for current file" to a hotkey. URLs break; local files don't.</p>
+      </div>
+
+      <div class="reveal reveal-delay-2 glass glass-hover rounded-2xl p-6">
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style="background: rgba(255,61,138,0.12); border: 1px solid rgba(255,61,138,0.35);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="#ff3d8a" stroke-width="2"/><circle cx="6" cy="6" r="2" stroke="#ff3d8a" stroke-width="2"/><circle cx="18" cy="6" r="2" stroke="#ff3d8a" stroke-width="2"/><circle cx="6" cy="18" r="2" stroke="#ff3d8a" stroke-width="2"/><circle cx="18" cy="18" r="2" stroke="#ff3d8a" stroke-width="2"/><path d="M8 8l4 4M16 8l-4 4M8 16l4-4M16 16l-4-4" stroke="#ff3d8a" stroke-width="1.5"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2">Graph view is your map</h3>
+        <p class="text-sm text-[var(--ink-dim)] leading-relaxed">Obsidian's graph view shows the wiki's shape: hubs, orphans, clusters. It's the fastest way to spot gaps and over-connected pages that should be split.</p>
+      </div>
+
+      <div class="reveal glass glass-hover rounded-2xl p-6">
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style="background: rgba(16,217,163,0.12); border: 1px solid rgba(16,217,163,0.35);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 4h18v6H3zM3 14h18v6H3z" stroke="#10d9a3" stroke-width="2" stroke-linejoin="round"/><circle cx="7" cy="7" r="1" fill="#10d9a3"/><circle cx="7" cy="17" r="1" fill="#10d9a3"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2">Marp for slide decks</h3>
+        <p class="text-sm text-[var(--ink-dim)] leading-relaxed">Marp is markdown-based slides. Obsidian has a plugin. Ask Claude to turn a synthesis page into a deck — useful for sharing findings without leaving the wiki.</p>
+      </div>
+
+      <div class="reveal reveal-delay-1 glass glass-hover rounded-2xl p-6">
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style="background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.35);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2h-4M9 11V7a3 3 0 016 0v4M9 11h6" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2">Dataview over frontmatter</h3>
+        <p class="text-sm text-[var(--ink-dim)] leading-relaxed">If Claude adds YAML frontmatter (tags, dates, source counts) to every page, the Dataview plugin can render dynamic tables and lists. Free dashboards from your existing data.</p>
+      </div>
+
+      <div class="reveal reveal-delay-2 glass glass-hover rounded-2xl p-6">
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style="background: rgba(0,245,255,0.12); border: 1px solid rgba(0,245,255,0.35);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6" stroke="#00f5ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-lg mb-2">It's just git</h3>
+        <p class="text-sm text-[var(--ink-dim)] leading-relaxed">The wiki is a git repo of markdown files. Push to GitHub for backup. Branch before risky refactors. Merge when satisfied. Version history comes for free.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY THIS WORKS -->
+<section id="why" class="relative px-6 py-24 md:py-32" style="z-index: 1;">
+  <div class="max-w-5xl mx-auto">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <div class="reveal mb-5"><span class="section-tag">08 · Why It Works</span></div>
+      <h2 class="reveal reveal-delay-1 font-display font-bold text-4xl md:text-6xl leading-tight">
+        The boring part <span class="grad-warm">is the point</span>
+      </h2>
+    </div>
+
+    <div class="reveal glass rounded-3xl p-8 md:p-12 relative overflow-hidden">
+      <div class="absolute inset-0 opacity-20" style="background: radial-gradient(circle at 80% 0%, rgba(255,61,138,0.3), transparent 60%);"></div>
+      <div class="relative">
+        <p class="text-lg md:text-xl text-[var(--ink)] leading-relaxed mb-6">
+          The tedious part of maintaining a knowledge base isn't the reading or the thinking — it's the <span class="text-[var(--magenta)] font-medium">bookkeeping</span>. Updating cross-references. Keeping summaries current. Noting when new data contradicts old claims. Maintaining consistency across dozens of pages.
+        </p>
+        <p class="text-lg md:text-xl text-[var(--ink-dim)] leading-relaxed mb-8">
+          Humans abandon wikis because the maintenance burden grows faster than the value. <span class="text-[var(--cyan)] font-medium">LLMs don't get bored, don't forget to update a cross-reference, and can touch 15 files in one pass.</span> The wiki stays maintained because the cost of maintenance is near zero.
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-4 mb-8">
+          <div class="p-5 rounded-2xl" style="background: rgba(255,61,138,0.06); border: 1px solid rgba(255,61,138,0.25);">
+            <div class="font-mono text-xs uppercase tracking-widest text-[var(--magenta)] mb-2">Human's job</div>
+            <ul class="text-sm text-[var(--ink-dim)] space-y-1.5">
+              <li>· Curate sources</li>
+              <li>· Direct the analysis</li>
+              <li>· Ask good questions</li>
+              <li>· Think about what it all means</li>
+            </ul>
+          </div>
+          <div class="p-5 rounded-2xl" style="background: rgba(0,245,255,0.06); border: 1px solid rgba(0,245,255,0.25);">
+            <div class="font-mono text-xs uppercase tracking-widest text-[var(--cyan)] mb-2">LLM's job</div>
+            <ul class="text-sm text-[var(--ink-dim)] space-y-1.5">
+              <li>· Everything else</li>
+              <li>· Summarize</li>
+              <li>· Cross-reference</li>
+              <li>· File, lint, bookkeep</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="pt-6 border-t" style="border-color: var(--border);">
+          <p class="text-base text-[var(--ink-dim)] leading-relaxed">
+            <span class="text-[var(--purple)] font-medium">Lineage:</span> The idea is related in spirit to Vannevar Bush's <em class="text-[var(--ink)]">Memex</em> (1945) — a personal, curated knowledge store with associative trails between documents. Bush's vision was closer to this than to what the web became: private, actively curated, with the connections between documents as valuable as the documents themselves. The part he couldn't solve was <span class="text-[var(--ink)]">who does the maintenance</span>. The LLM handles that.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="relative px-6 py-16 mt-12" style="z-index: 1; border-top: 1px solid var(--border); background: rgba(5,6,15,0.7);">
+  <div class="max-w-7xl mx-auto">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+      <div class="flex items-center gap-3">
+        <div class="relative w-10 h-10">
+          <div class="absolute inset-0 rounded-lg" style="background: linear-gradient(135deg, var(--cyan), var(--purple)); transform: rotate(45deg);"></div>
+          <div class="absolute inset-1 rounded-md flex items-center justify-center" style="background: var(--bg-0);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="6" cy="6" r="2.5" fill="#00f5ff"/><circle cx="18" cy="6" r="2.5" fill="#8b5cf6"/>
+              <circle cx="6" cy="18" r="2.5" fill="#ff3d8a"/><circle cx="18" cy="18" r="2.5" fill="#10d9a3"/>
+              <line x1="6" y1="6" x2="18" y2="6" stroke="#a3aed0" stroke-width="1"/><line x1="6" y1="6" x2="6" y2="18" stroke="#a3aed0" stroke-width="1"/>
+              <line x1="6" y1="6" x2="18" y2="18" stroke="#a3aed0" stroke-width="1"/><line x1="18" y1="6" x2="18" y2="18" stroke="#a3aed0" stroke-width="1"/>
+              <line x1="6" y1="18" x2="18" y2="18" stroke="#a3aed0" stroke-width="1"/>
+            </svg>
+          </div>
+        </div>
+        <div>
+          <div class="font-display font-bold text-lg">LLM<span class="grad-cyan">Wiki</span></div>
+          <div class="text-xs text-[var(--ink-faint)] font-mono">a pattern, not a product</div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-6 text-sm text-[var(--ink-dim)]">
+        <a href="#core-idea" class="nav-link">Core Idea</a>
+        <a href="#architecture" class="nav-link">Architecture</a>
+        <a href="#operations" class="nav-link">Operations</a>
+        <a href="#quiz" class="nav-link">Quiz</a>
+        <a href="#deep-dive" class="nav-link">Deep Dive</a>
+        <a href="#tips" class="nav-link">Tips</a>
+      </div>
+    </div>
+
+    <div class="mt-10 pt-6 border-t flex flex-col md:flex-row md:items-center md:justify-between gap-3" style="border-color: var(--border);">
+      <p class="text-xs text-[var(--ink-faint)] font-mono">
+        Obsidian is the IDE · the LLM is the programmer · the wiki is the codebase
+      </p>
+      <p class="text-xs text-[var(--ink-faint)] font-mono">
+        inspired by Vannevar Bush's Memex, 1945
+      </p>
+    </div>
+  </div>
+</footer>
+
+<!-- JAVASCRIPT -->
+<script>
+(function() {
+  'use strict';
+
+  // ============ PARTICLE NETWORK BACKGROUND ============
+  const canvas = document.getElementById('particle-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  let mouse = { x: -1000, y: -1000 };
+  let W = 0, H = 0;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    initParticles();
+  }
+
+  function initParticles() {
+    const count = Math.min(80, Math.floor(W * H / 18000));
+    particles = [];
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: (Math.random() - 0.5) * 0.35,
+        r: Math.random() * 1.6 + 0.6,
+        hue: Math.random() < 0.5 ? 185 : (Math.random() < 0.5 ? 265 : 335)
+      });
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const maxDist = 140;
+
+    // Draw edges
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const p1 = particles[i], p2 = particles[j];
+        const dx = p1.x - p2.x, dy = p1.y - p2.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < maxDist) {
+          const alpha = (1 - d / maxDist) * 0.22;
+          ctx.strokeStyle = `hsla(${(p1.hue + p2.hue) / 2}, 90%, 65%, ${alpha})`;
+          ctx.lineWidth = 0.6;
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Mouse connections
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const dx = p.x - mouse.x, dy = p.y - mouse.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 180) {
+        const alpha = (1 - d / 180) * 0.5;
+        ctx.strokeStyle = `hsla(${p.hue}, 90%, 70%, ${alpha})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(mouse.x, mouse.y);
+        ctx.stroke();
+      }
+    }
+
+    // Draw particles
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+      ctx.fillStyle = `hsla(${p.hue}, 90%, 65%, 0.85)`;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = `hsla(${p.hue}, 90%, 65%, 0.9)`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  window.addEventListener('mouseleave', () => { mouse.x = -1000; mouse.y = -1000; });
+  resize();
+  draw();
+
+  // ============ SCROLL REVEAL ============
+  const reveals = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+  reveals.forEach(el => io.observe(el));
+
+  // ============ COUNTER ANIMATION ============
+  const counters = document.querySelectorAll('[data-target]');
+  const counterIO = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        const target = parseInt(el.dataset.target, 10);
+        let cur = 0;
+        const step = Math.max(1, Math.floor(target / 50));
+        const interval = setInterval(() => {
+          cur += step;
+          if (cur >= target) { cur = target; clearInterval(interval); }
+          el.textContent = cur;
+        }, 30);
+        counterIO.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+  counters.forEach(c => counterIO.observe(c));
+
+  // ============ LAYER CARD MOUSE GLOW ============
+  document.querySelectorAll('.layer-card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+      card.style.setProperty('--my', `${e.clientY - r.top}px`);
+    });
+  });
+
+  // ============ MOBILE MENU ============
+  const mobileBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  if (mobileBtn) {
+    mobileBtn.addEventListener('click', () => mobileMenu.classList.toggle('open'));
+    mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => mobileMenu.classList.remove('open')));
+  }
+
+  // ============ QUIZ ENGINE ============
+  const QUIZ_DATA = {
+    low: {
+      label: 'LOW',
+      color: 'rgba(16,217,163,0.12)',
+      border: 'rgba(16,217,163,0.3)',
+      text: '#10d9a3',
+      questions: [
+        {
+          q: 'What is the core difference between RAG and the LLM Wiki pattern?',
+          options: [
+            'RAG uses vector databases; LLM Wiki uses markdown files',
+            'RAG rediscovers knowledge at query time; LLM Wiki compiles it once and keeps it current',
+            'RAG is for chatbots; LLM Wiki is for search engines',
+            'RAG works with PDFs; LLM Wiki only works with markdown'
+          ],
+          correct: 1,
+          why: 'In RAG, the LLM retrieves relevant chunks at query time and synthesizes from scratch every question. In the LLM Wiki pattern, the LLM reads each source once at ingest time and integrates it into a persistent wiki — the synthesis is already done and just kept current.'
+        },
+        {
+          q: 'Who owns (writes and maintains) the wiki layer?',
+          options: [
+            'The user — they write all wiki pages by hand',
+            'The LLM — the user only reads it',
+            'A separate maintainer team',
+            'The hosting provider (e.g. Obsidian)'
+          ],
+          correct: 1,
+          why: 'The LLM owns the wiki entirely. It creates pages, updates them when new sources arrive, maintains cross-references, and keeps everything consistent. The user reads it; the LLM writes it.'
+        },
+        {
+          q: 'What are the three layers of the LLM Wiki architecture?',
+          options: [
+            'Database, API, Frontend',
+            'Raw sources, The wiki, The schema',
+            'Ingest, Query, Lint',
+            'Index, Log, Graph view'
+          ],
+          correct: 1,
+          why: 'Raw sources (immutable truth) → the wiki (LLM-owned markdown files) → the schema (CLAUDE.md or AGENTS.md, co-evolved by you and the LLM). Ingest/Query/Lint are operations, not layers.'
+        }
+      ]
+    },
+    medium: {
+      label: 'MEDIUM',
+      color: 'rgba(251,191,36,0.12)',
+      border: 'rgba(251,191,36,0.3)',
+      text: '#fbbf24',
+      questions: [
+        {
+          q: 'What does the schema file (CLAUDE.md / AGENTS.md) actually do?',
+          options: [
+            'Stores the raw source documents',
+            'Configures Obsidian plugins',
+            'Tells the LLM the wiki structure, conventions, and workflows to follow',
+            'Encrypts the wiki for privacy'
+          ],
+          correct: 2,
+          why: 'The schema is the key configuration file. It tells the LLM how the wiki is structured, what conventions to follow, and what workflows to run on ingest/query/lint. It is what turns the LLM into a disciplined wiki maintainer rather than a generic chatbot.'
+        },
+        {
+          q: 'What is the primary purpose of the lint operation?',
+          options: [
+            'Compress the wiki to save disk space',
+            'Format markdown files for readability',
+            'Find contradictions, stale claims, orphans, and gaps in the wiki',
+            'Generate embeddings for vector search'
+          ],
+          correct: 2,
+          why: 'Lint is a periodic health-check. It surfaces contradictions between pages, stale claims superseded by newer sources, orphan pages with no inbound links, missing cross-references, and data gaps — then suggests new questions to investigate and new sources to find.'
+        },
+        {
+          q: 'What does index.md contain, and how does the LLM use it?',
+          options: [
+            'A chronological log of every action',
+            'A content-oriented catalog of every page, organized by category',
+            'The raw source files indexed by hash',
+            'A list of broken links to fix'
+          ],
+          correct: 1,
+          why: 'index.md is content-oriented — a catalog of everything in the wiki, each page listed with a link, one-line summary, and metadata. When answering a query, the LLM reads index.md first to find relevant pages, then drills into them. This works well at moderate scale without embedding-based RAG.'
+        },
+        {
+          q: 'What is the key insight about the wiki as an artifact?',
+          options: [
+            'It should be rebuilt from scratch every month',
+            'It is persistent and compounding — richer with every source and question',
+            'It needs to be migrated to a new platform annually',
+            'It must be kept under 100 pages for performance'
+          ],
+          correct: 1,
+          why: 'The wiki is a persistent, compounding artifact. Cross-references are already there. Contradictions are already flagged. The synthesis already reflects everything you have read. It gets richer with every source you add and every question you ask.'
+        }
+      ]
+    },
+    high: {
+      label: 'HIGH',
+      color: 'rgba(255,61,138,0.12)',
+      border: 'rgba(255,61,138,0.3)',
+      text: '#ff3d8a',
+      questions: [
+        {
+          q: 'Why does log.md use a consistent prefix like "## [YYYY-MM-DD] ingest | Title"?',
+          options: [
+            'It is required by Obsidian',
+            'It makes the file parseable with simple unix tools like grep',
+            'It improves LLM token efficiency',
+            'It is needed for vector search indexing'
+          ],
+          correct: 1,
+          why: 'A consistent prefix makes log.md parseable with simple unix tools. For example, `grep "^## \\[" log.md | tail -5` gives you the last 5 entries. This gives you a quick timeline of the wiki\'s evolution without any special tooling.'
+        },
+        {
+          q: 'What is the historical inspiration for the LLM Wiki pattern?',
+          options: [
+            'Wikipedia, founded 2001',
+            'Doug Engelbart\'s "Mother of All Demos", 1968',
+            'Vannevar Bush\'s Memex, described in "As We May Think" (1945)',
+            'Ted Nelson\'s Xanadu project, 1960'
+          ],
+          correct: 2,
+          why: 'The idea is related in spirit to Vannevar Bush\'s Memex (1945) — a personal, curated knowledge store with associative trails between documents. Bush\'s vision was private, actively curated, with connections between documents as valuable as the documents themselves. The part he couldn\'t solve was who does the maintenance. The LLM handles that.'
+        },
+        {
+          q: 'Why do humans typically abandon personal wikis over time?',
+          options: [
+            'They run out of storage space',
+            'The maintenance burden (bookkeeping, cross-refs, consistency) grows faster than the value',
+            'Wikis become obsolete as new formats appear',
+            'Search engines make personal wikis redundant'
+          ],
+          correct: 1,
+          why: 'The tedious part of maintaining a knowledge base is not the reading or the thinking — it is the bookkeeping. Updating cross-references, keeping summaries current, noting contradictions, maintaining consistency across dozens of pages. Humans abandon wikis because the maintenance burden grows faster than the value. LLMs do not get bored and can touch 15 files in one pass.'
+        },
+        {
+          q: 'What is the recommended workaround for LLMs reading markdown with inline images?',
+          options: [
+            'Convert all images to base64 strings',
+            'Use only text-based sources — no images allowed',
+            'Have the LLM read the text first, then view referenced images separately',
+            'Use a multimodal embedding model to pre-process images'
+          ],
+          correct: 2,
+          why: 'LLMs cannot natively read markdown with inline images in one pass. The workaround: have the LLM read the text first, then view some or all of the referenced images separately to gain additional context. It is a bit clunky but works well enough. Downloading images locally (e.g. to raw/assets/) makes this reliable since URLs may break.'
+        },
+        {
+          q: 'Why does the LLM Wiki pattern scale to ~100 sources and hundreds of pages without embedding-based RAG?',
+          options: [
+            'LLMs have unlimited context windows',
+            'The index.md file acts as a catalog, updated on every ingest, that the LLM reads first',
+            'Obsidian automatically generates embeddings',
+            'CLAUDE.md contains a pre-computed embedding cache'
+          ],
+          correct: 1,
+          why: 'At moderate scale (~100 sources, ~hundreds of pages), the index.md file is enough. It is a catalog of every page with a one-line summary, organized by category. When answering a query, the LLM reads index.md first to find relevant pages, then drills into them. This avoids the need for embedding-based RAG infrastructure.'
+        }
+      ]
+    }
+  };
+
+  let currentDifficulty = 'low';
+  let currentIndex = 0;
+  let score = 0;
+  let locked = false;
+
+  const els = {
+    selector: document.getElementById('difficulty-selector'),
+    badge: document.getElementById('quiz-difficulty-badge'),
+    score: document.getElementById('quiz-score'),
+    total: document.getElementById('quiz-total'),
+    progressLabel: document.getElementById('quiz-progress-label'),
+    progressFill: document.getElementById('quiz-progress-fill'),
+    questionText: document.getElementById('quiz-question-text'),
+    options: document.getElementById('quiz-options'),
+    explanation: document.getElementById('quiz-explanation'),
+    explanationText: document.getElementById('quiz-explanation-text'),
+    nextBtn: document.getElementById('quiz-next'),
+    nextLabel: document.getElementById('quiz-next-label'),
+    restartBtn: document.getElementById('quiz-restart'),
+    retryBtn: document.getElementById('quiz-retry'),
+    result: document.getElementById('quiz-result'),
+    questionContainer: document.getElementById('quiz-question-container'),
+    finalPercent: document.getElementById('quiz-final-percent'),
+    resultTitle: document.getElementById('quiz-result-title'),
+    resultMessage: document.getElementById('quiz-result-message')
+  };
+
+  function setDifficulty(diff) {
+    currentDifficulty = diff;
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.difficulty === diff);
+    });
+    const d = QUIZ_DATA[diff];
+    els.badge.textContent = `${d.label} · ${d.questions.length} questions`;
+    els.badge.style.background = d.color;
+    els.badge.style.color = d.text;
+    els.badge.style.borderColor = d.border;
+    els.total.textContent = d.questions.length;
+    resetQuiz();
+  }
+
+  function resetQuiz() {
+    currentIndex = 0;
+    score = 0;
+    locked = false;
+    els.result.classList.add('hidden');
+    els.questionContainer.classList.remove('hidden');
+    els.explanation.classList.add('hidden');
+    els.nextBtn.classList.add('hidden');
+    renderQuestion();
+  }
+
+  function renderQuestion() {
+    const d = QUIZ_DATA[currentDifficulty];
+    const q = d.questions[currentIndex];
+    locked = false;
+
+    els.score.innerHTML = `Score: <span class="text-[var(--cyan)] font-bold">${score}</span> / <span>${d.questions.length}</span>`;
+    els.progressLabel.textContent = `Question ${currentIndex + 1} of ${d.questions.length}`;
+    els.progressFill.style.width = `${((currentIndex + 1) / d.questions.length) * 100}%`;
+
+    els.questionText.textContent = q.q;
+    els.options.innerHTML = '';
+    els.explanation.classList.add('hidden');
+    els.nextBtn.classList.add('hidden');
+
+    const letters = ['A', 'B', 'C', 'D'];
+    q.options.forEach((opt, i) => {
+      const div = document.createElement('div');
+      div.className = 'quiz-option flex items-center gap-4 p-4 rounded-xl border text-sm md:text-base';
+      div.style.borderColor = 'var(--border)';
+      div.style.background = 'rgba(139,92,246,0.04)';
+      div.innerHTML = `
+        <span class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-sm" style="background: rgba(139,92,246,0.12); color: var(--purple); border: 1px solid rgba(139,92,246,0.3);">${letters[i]}</span>
+        <span class="text-[var(--ink-dim)]">${opt}</span>
+      `;
+      div.addEventListener('click', () => selectOption(i, div));
+      els.options.appendChild(div);
+    });
+  }
+
+  function selectOption(idx, el) {
+    if (locked) return;
+    locked = true;
+    const d = QUIZ_DATA[currentDifficulty];
+    const q = d.questions[currentIndex];
+
+    const all = els.options.querySelectorAll('.quiz-option');
+    all.forEach(o => o.classList.add('locked'));
+
+    if (idx === q.correct) {
+      el.classList.add('correct');
+      score++;
+    } else {
+      el.classList.add('wrong');
+      all[q.correct].classList.add('correct');
+    }
+
+    els.explanationText.textContent = q.why;
+    els.explanation.classList.remove('hidden');
+    els.nextBtn.classList.remove('hidden');
+    els.nextLabel.textContent = currentIndex + 1 === d.questions.length ? 'See results' : 'Next question';
+
+    els.score.innerHTML = `Score: <span class="text-[var(--cyan)] font-bold">${score}</span> / <span>${d.questions.length}</span>`;
+  }
+
+  function nextQuestion() {
+    const d = QUIZ_DATA[currentDifficulty];
+    if (currentIndex + 1 >= d.questions.length) {
+      showResult();
+    } else {
+      currentIndex++;
+      renderQuestion();
+    }
+  }
+
+  function showResult() {
+    const d = QUIZ_DATA[currentDifficulty];
+    const pct = Math.round((score / d.questions.length) * 100);
+    els.questionContainer.classList.add('hidden');
+    els.explanation.classList.add('hidden');
+    els.nextBtn.classList.add('hidden');
+    els.result.classList.remove('hidden');
+    els.progressFill.style.width = '100%';
+    els.progressLabel.textContent = 'Complete';
+
+    let title, msg;
+    if (pct === 100) {
+      title = 'Perfect compile.';
+      msg = `You fully understand the ${d.label.toLowerCase()} level. The wiki would be proud.`;
+    } else if (pct >= 60) {
+      title = 'Solid synthesis.';
+      msg = `${score}/${d.questions.length} correct. A few cross-references could be tighter.`;
+    } else {
+      title = 'Needs a lint pass.';
+      msg = `${score}/${d.questions.length} correct. Re-ingest the core idea and try again.`;
+    }
+    els.resultTitle.textContent = title;
+    els.resultMessage.textContent = msg;
+
+    // Animate the percent counter
+    let cur = 0;
+    const step = Math.max(1, Math.floor(pct / 30));
+    const interval = setInterval(() => {
+      cur += step;
+      if (cur >= pct) { cur = pct; clearInterval(interval); }
+      els.finalPercent.textContent = cur + '%';
+    }, 25);
+  }
+
+  // Wire up
+  document.querySelectorAll('.difficulty-btn').forEach(btn => {
+    btn.addEventListener('click', () => setDifficulty(btn.dataset.difficulty));
+  });
+  els.nextBtn.addEventListener('click', nextQuestion);
+  els.restartBtn.addEventListener('click', resetQuiz);
+  els.retryBtn.addEventListener('click', resetQuiz);
+
+  // Initialize
+  setDifficulty('low');
+
+})();
+</script>
+</body>
+</html>
