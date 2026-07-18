@@ -47,6 +47,15 @@
     pointer-events: none;
   }
 
+  /* Confetti canvas - WOH EFFECT */
+  #confetti-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
   /* Aurora glow blobs */
   .aurora {
     position: fixed;
@@ -208,28 +217,70 @@
   .tok-tag { color: #8b5cf6; }
   .tok-punc { color: #a3aed0; }
 
-  /* Quiz */
+  /* QUIZ - HYPER DYNAMIC WOW EFFECT */
   .quiz-option {
     transition: all .25s cubic-bezier(.2,.8,.2,1);
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
   }
   .quiz-option:hover:not(.locked) {
-    transform: translateX(6px);
+    transform: translateX(6px) scale(1.02);
     border-color: rgba(0,245,255,0.55);
     background: rgba(0,245,255,0.06);
+    box-shadow: 0 4px 20px rgba(0,245,255,0.15);
   }
+  
+  /* Correct Answer - Super Green Glow */
   .quiz-option.correct {
-    background: rgba(16,217,163,0.14);
-    border-color: var(--green);
-    color: var(--green);
+    background: linear-gradient(135deg, rgba(16,217,163,0.25), rgba(16,217,163,0.05)) !important;
+    border-color: var(--green) !important;
+    color: var(--green) !important;
+    box-shadow: 0 0 25px rgba(16,217,163,0.6), inset 0 0 15px rgba(16,217,163,0.2) !important;
+    transform: scale(1.05) !important;
+    animation: pulse-correct 0.6s ease-out;
   }
+  @keyframes pulse-correct {
+    0% { box-shadow: 0 0 0 0 rgba(16,217,163, 0.7); }
+    70% { box-shadow: 0 0 0 20px rgba(16,217,163, 0); }
+    100% { box-shadow: 0 0 25px rgba(16,217,163,0.6), inset 0 0 15px rgba(16,217,163,0.2); }
+  }
+
+  /* Wrong Answer - Super Red Glow */
   .quiz-option.wrong {
-    background: rgba(255,61,138,0.14);
-    border-color: var(--magenta);
-    color: var(--magenta);
+    background: linear-gradient(135deg, rgba(255,61,138,0.25), rgba(255,61,138,0.05)) !important;
+    border-color: var(--magenta) !important;
+    color: var(--magenta) !important;
+    box-shadow: 0 0 25px rgba(255,61,138,0.6), inset 0 0 15px rgba(255,61,138,0.2) !important;
+    animation: shake-tiny 0.5s cubic-bezier(.36,.07,.19,.97) both;
   }
+
   .quiz-option.locked { cursor: default; }
   .quiz-option.locked:not(.correct):not(.wrong) { opacity: .45; }
+
+  /* Vibration for wrong answer */
+  @keyframes shake-tiny {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+  }
+  @keyframes shake-hard {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    10% { transform: translate(-3px, -2px) rotate(-1deg); }
+    20% { transform: translate(3px, 2px) rotate(1deg); }
+    30% { transform: translate(-3px, 2px) rotate(0deg); }
+    40% { transform: translate(3px, -2px) rotate(1deg); }
+    50% { transform: translate(-2px, 2px) rotate(-1deg); }
+    60% { transform: translate(2px, -2px) rotate(0deg); }
+    70% { transform: translate(-2px, 2px) rotate(-1deg); }
+    80% { transform: translate(2px, -2px) rotate(1deg); }
+    90% { transform: translate(-1px, 1px) rotate(0deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+  }
+  .vibrate-screen {
+    animation: shake-hard 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  }
 
   .difficulty-btn {
     transition: all .3s; cursor: pointer;
@@ -312,7 +363,6 @@
     50% { opacity: 1; transform: translateX(4px); }
   }
 
-  /* Hide on small screens helper */
   @media (max-width: 768px) {
     .hide-mobile { display: none !important; }
   }
@@ -322,6 +372,8 @@
 
 <!-- Particle background canvas -->
 <canvas id="particle-canvas"></canvas>
+<!-- Confetti Canvas for WOW Effect -->
+<canvas id="confetti-canvas"></canvas>
 
 <!-- Aurora glow blobs -->
 <div class="aurora" style="width: 500px; height: 500px; background: #00f5ff; top: -150px; left: -150px;"></div>
@@ -450,7 +502,6 @@
 
     <!-- Comparison -->
     <div class="grid md:grid-cols-2 gap-6 lg:gap-8 mb-16">
-      <!-- RAG side -->
       <div class="reveal glass rounded-3xl p-8 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-32 h-32 rounded-full" style="background: radial-gradient(circle, rgba(255,61,138,0.18), transparent 70%);"></div>
         <div class="flex items-center justify-between mb-6">
@@ -471,7 +522,6 @@
         </ul>
       </div>
 
-      <!-- LLM Wiki side -->
       <div class="reveal reveal-delay-1 glass rounded-3xl p-8 relative overflow-hidden" style="border-color: rgba(0,245,255,0.35);">
         <div class="absolute top-0 right-0 w-32 h-32 rounded-full" style="background: radial-gradient(circle, rgba(0,245,255,0.20), transparent 70%);"></div>
         <div class="flex items-center justify-between mb-6">
@@ -493,7 +543,6 @@
       </div>
     </div>
 
-    <!-- The big insight -->
     <div class="reveal glass rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
       <div class="absolute inset-0 opacity-30" style="background: radial-gradient(circle at 50% 0%, rgba(0,245,255,0.25), transparent 60%);"></div>
       <div class="relative">
@@ -528,7 +577,6 @@
     </div>
 
     <div class="grid lg:grid-cols-3 gap-6">
-      <!-- Layer 1: Raw sources -->
       <div class="layer-card reveal glass rounded-3xl p-8">
         <div class="flex items-center justify-between mb-6">
           <div class="font-mono text-xs uppercase tracking-widest text-[var(--ink-faint)]">Layer 01</div>
@@ -549,7 +597,6 @@
         </div>
       </div>
 
-      <!-- Layer 2: The wiki -->
       <div class="layer-card reveal reveal-delay-1 glass rounded-3xl p-8" style="border-color: rgba(0,245,255,0.35);">
         <div class="flex items-center justify-between mb-6">
           <div class="font-mono text-xs uppercase tracking-widest text-[var(--cyan)]">Layer 02 · core</div>
@@ -571,7 +618,6 @@
         </div>
       </div>
 
-      <!-- Layer 3: Schema -->
       <div class="layer-card reveal reveal-delay-2 glass rounded-3xl p-8">
         <div class="flex items-center justify-between mb-6">
           <div class="font-mono text-xs uppercase tracking-widest text-[var(--ink-faint)]">Layer 03</div>
@@ -594,7 +640,6 @@
       </div>
     </div>
 
-    <!-- Wiki graph visualization -->
     <div class="reveal mt-10 glass rounded-3xl p-6 md:p-10">
       <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-3">
         <div>
@@ -609,7 +654,6 @@
         </div>
       </div>
       <svg id="wiki-graph" viewBox="0 0 800 360" class="w-full h-auto" style="max-height: 380px;">
-        <!-- edges -->
         <g stroke="rgba(139,92,246,0.35)" stroke-width="1.2" fill="none">
           <line class="graph-edge" x1="400" y1="180" x2="180" y2="80"/>
           <line class="graph-edge" x1="400" y1="180" x2="620" y2="80"/>
@@ -625,7 +669,6 @@
           <line class="graph-edge" x1="640" y1="240" x2="480" y2="320"/>
           <line class="graph-edge" x1="320" y1="40" x2="480" y2="40"/>
         </g>
-        <!-- nodes -->
         <g class="graph-node" data-label="LLM">
           <circle cx="400" cy="180" r="11" fill="#00f5ff" filter="drop-shadow(0 0 6px #00f5ff)"/>
           <text x="400" y="208" text-anchor="middle" fill="#e8ecf8" font-size="12" font-family="JetBrains Mono">LLM</text>
@@ -685,10 +728,8 @@
       </p>
     </div>
 
-    <!-- Flow diagram -->
     <div class="reveal mb-12 glass rounded-3xl p-6 md:p-10">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-2 items-stretch text-center">
-        <!-- Ingest -->
         <div class="p-6 rounded-2xl relative" style="background: rgba(0,245,255,0.05); border: 1px solid rgba(0,245,255,0.25);">
           <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 float" style="background: linear-gradient(135deg, rgba(0,245,255,0.2), rgba(0,245,255,0.05)); border: 1px solid rgba(0,245,255,0.4);">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="#00f5ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -703,7 +744,6 @@
         </div>
         <div class="md:hidden flex justify-center"><svg width="24" height="48" viewBox="0 0 24 48" fill="none"><path d="M12 2v40m0 0l7-7m-7 7l-7-7" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="arrow-flow"/></svg></div>
 
-        <!-- Query -->
         <div class="p-6 rounded-2xl relative" style="background: rgba(139,92,246,0.05); border: 1px solid rgba(139,92,246,0.25);">
           <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 float-slow" style="background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05)); border: 1px solid rgba(139,92,246,0.4);">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round"/></svg>
@@ -718,7 +758,6 @@
         </div>
         <div class="md:hidden flex justify-center"><svg width="24" height="48" viewBox="0 0 24 48" fill="none"><path d="M12 2v40m0 0l7-7m-7 7l-7-7" stroke="#ff3d8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="arrow-flow"/></svg></div>
 
-        <!-- Lint -->
         <div class="p-6 rounded-2xl relative" style="background: rgba(255,61,138,0.05); border: 1px solid rgba(255,61,138,0.25);">
           <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 float" style="background: linear-gradient(135deg, rgba(255,61,138,0.2), rgba(255,61,138,0.05)); border: 1px solid rgba(255,61,138,0.4);">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="#ff3d8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -737,7 +776,6 @@
       </div>
     </div>
 
-    <!-- Operation detail cards -->
     <div class="grid md:grid-cols-3 gap-6">
       <div class="reveal glass glass-hover rounded-3xl p-6">
         <div class="flex items-center gap-3 mb-4">
@@ -784,7 +822,6 @@
     </div>
 
     <div class="grid lg:grid-cols-2 gap-6">
-      <!-- index.md -->
       <div class="reveal">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
@@ -820,7 +857,6 @@
         </div>
       </div>
 
-      <!-- log.md -->
       <div class="reveal reveal-delay-1">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
@@ -924,7 +960,6 @@
 
     <!-- Quiz body -->
     <div class="reveal glass rounded-3xl p-6 md:p-10">
-      <!-- Progress -->
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-3">
           <span id="quiz-difficulty-badge" class="font-mono text-xs px-3 py-1 rounded-full" style="background: rgba(16,217,163,0.12); color: var(--green); border: 1px solid rgba(16,217,163,0.3);">LOW · 3 questions</span>
@@ -936,13 +971,11 @@
         <div id="quiz-progress-fill" class="progress-fill" style="width: 33%;"></div>
       </div>
 
-      <!-- Question container -->
       <div id="quiz-question-container">
         <h3 id="quiz-question-text" class="font-display font-bold text-xl md:text-2xl leading-snug mb-6"></h3>
         <div id="quiz-options" class="space-y-3"></div>
       </div>
 
-      <!-- Explanation -->
       <div id="quiz-explanation" class="hidden mt-6 p-5 rounded-2xl" style="background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.25);">
         <div class="flex items-start gap-3">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10" stroke="#8b5cf6" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round"/></svg>
@@ -953,7 +986,6 @@
         </div>
       </div>
 
-      <!-- Actions -->
       <div class="mt-8 flex items-center justify-between">
         <button id="quiz-restart" class="text-sm text-[var(--ink-faint)] hover:text-[var(--ink)] transition flex items-center gap-2">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 109-9c-2.5 0-4.7 1-6.4 2.6L3 8M3 3v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -965,7 +997,6 @@
         </button>
       </div>
 
-      <!-- Final result -->
       <div id="quiz-result" class="hidden text-center py-8">
         <div class="relative inline-block mb-6">
           <div class="pulse-ring"></div>
@@ -997,10 +1028,7 @@
       </p>
     </div>
 
-    <!-- Steps -->
     <div class="space-y-6">
-
-      <!-- STEP 1 -->
       <div class="reveal relative pl-24">
         <div class="step-line"></div>
         <div class="num-badge absolute left-0 top-0">1</div>
@@ -1037,7 +1065,6 @@ claude</pre></div>
         </div>
       </div>
 
-      <!-- STEP 2 -->
       <div class="reveal relative pl-24">
         <div class="step-line"></div>
         <div class="num-badge absolute left-0 top-0">2</div>
@@ -1109,7 +1136,6 @@ Every wiki page starts with YAML frontmatter:
         </div>
       </div>
 
-      <!-- STEP 3 -->
       <div class="reveal relative pl-24">
         <div class="step-line"></div>
         <div class="num-badge absolute left-0 top-0">3</div>
@@ -1150,7 +1176,6 @@ git add -A <span class="tok-punc">&amp;&amp;</span> git commit -m <span class="t
         </div>
       </div>
 
-      <!-- STEP 4 -->
       <div class="reveal relative pl-24">
         <div class="step-line"></div>
         <div class="num-badge absolute left-0 top-0">4</div>
@@ -1186,7 +1211,6 @@ git add -A <span class="tok-punc">&amp;&amp;</span> git commit -m <span class="t
         </div>
       </div>
 
-      <!-- STEP 5 -->
       <div class="reveal relative pl-24">
         <div class="step-line"></div>
         <div class="num-badge absolute left-0 top-0">5</div>
@@ -1231,7 +1255,6 @@ git add -A <span class="tok-punc">&amp;&amp;</span> git commit -m <span class="t
         </div>
       </div>
 
-      <!-- STEP 6 -->
       <div class="reveal relative pl-24">
         <div class="step-line"></div>
         <div class="num-badge absolute left-0 top-0">6</div>
@@ -1270,7 +1293,6 @@ git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span c
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </section>
@@ -1471,8 +1493,6 @@ git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span c
   function draw() {
     ctx.clearRect(0, 0, W, H);
     const maxDist = 140;
-
-    // Draw edges
     for (let i = 0; i < particles.length; i++) {
       for (let j = i + 1; j < particles.length; j++) {
         const p1 = particles[i], p2 = particles[j];
@@ -1489,8 +1509,6 @@ git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span c
         }
       }
     }
-
-    // Mouse connections
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
       const dx = p.x - mouse.x, dy = p.y - mouse.y;
@@ -1505,8 +1523,6 @@ git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span c
         ctx.stroke();
       }
     }
-
-    // Draw particles
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
       p.x += p.vx;
@@ -1521,7 +1537,6 @@ git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span c
       ctx.fill();
       ctx.shadowBlur = 0;
     }
-
     requestAnimationFrame(draw);
   }
 
@@ -1530,6 +1545,66 @@ git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span c
   window.addEventListener('mouseleave', () => { mouse.x = -1000; mouse.y = -1000; });
   resize();
   draw();
+
+  // ============ CONFETTI WOW EFFECT ============
+  const confettiCanvas = document.getElementById('confetti-canvas');
+  const cctx = confettiCanvas.getContext('2d');
+  let confettiParticles = [];
+  
+  function resizeConfetti() {
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeConfetti);
+  resizeConfetti();
+
+  function launchConfetti() {
+    const colors = ['#00f5ff', '#8b5cf6', '#ff3d8a', '#10d9a3', '#fbbf24'];
+    const originX = window.innerWidth / 2;
+    const originY = window.innerHeight / 2;
+    
+    for (let i = 0; i < 150; i++) {
+      confettiParticles.push({
+        x: originX,
+        y: originY,
+        vx: (Math.random() - 0.5) * 25,
+        vy: Math.random() * -25 - 5,
+        g: 0.8, // gravity
+        size: Math.random() * 8 + 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        angle: Math.random() * 360,
+        spin: (Math.random() - 0.5) * 0.4,
+        life: 100 // frames
+      });
+    }
+  }
+
+  function updateConfetti() {
+    cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    
+    confettiParticles = confettiParticles.filter(p => p.life > 0 && p.y < confettiCanvas.height + 50);
+    
+    confettiParticles.forEach(p => {
+      p.vy += p.g;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.angle += p.spin;
+      p.life--;
+      
+      cctx.save();
+      cctx.translate(p.x, p.y);
+      cctx.rotate(p.angle * Math.PI / 180);
+      cctx.globalAlpha = Math.max(0, p.life / 100);
+      cctx.fillStyle = p.color;
+      cctx.shadowBlur = 10;
+      cctx.shadowColor = p.color;
+      cctx.fillRect(-p.size/2, -p.size/2, p.size, p.size * 0.4);
+      cctx.restore();
+    });
+    
+    requestAnimationFrame(updateConfetti);
+  }
+  updateConfetti();
 
   // ============ SCROLL REVEAL ============
   const reveals = document.querySelectorAll('.reveal');
@@ -1832,9 +1907,14 @@ git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span c
     if (idx === q.correct) {
       el.classList.add('correct');
       score++;
+      // LAUNCH CONFETTI WOW EFFECT
+      launchConfetti();
     } else {
       el.classList.add('wrong');
       all[q.correct].classList.add('correct');
+      // VIBRATE SCREEN EFFECT
+      document.body.classList.add('vibrate-screen');
+      setTimeout(() => document.body.classList.remove('vibrate-screen'), 500);
     }
 
     els.explanationText.textContent = q.why;
@@ -1869,6 +1949,10 @@ git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span c
     if (pct === 100) {
       title = 'Perfect compile.';
       msg = `You fully understand the ${d.label.toLowerCase()} level. The wiki would be proud.`;
+      // MEGA CONFETTI FOR 100%
+      setTimeout(launchConfetti, 100);
+      setTimeout(launchConfetti, 300);
+      setTimeout(launchConfetti, 500);
     } else if (pct >= 60) {
       title = 'Solid synthesis.';
       msg = `${score}/${d.questions.length} correct. A few cross-references could be tighter.`;
@@ -1879,7 +1963,6 @@ git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span c
     els.resultTitle.textContent = title;
     els.resultMessage.textContent = msg;
 
-    // Animate the percent counter
     let cur = 0;
     const step = Math.max(1, Math.floor(pct / 30));
     const interval = setInterval(() => {
@@ -1889,7 +1972,6 @@ git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span c
     }, 25);
   }
 
-  // Wire up
   document.querySelectorAll('.difficulty-btn').forEach(btn => {
     btn.addEventListener('click', () => setDifficulty(btn.dataset.difficulty));
   });
@@ -1897,7 +1979,6 @@ git add CLAUDE.md <span class="tok-punc">&amp;&amp;</span> git commit -m <span c
   els.restartBtn.addEventListener('click', resetQuiz);
   els.retryBtn.addEventListener('click', resetQuiz);
 
-  // Initialize
   setDifficulty('low');
 
 })();
